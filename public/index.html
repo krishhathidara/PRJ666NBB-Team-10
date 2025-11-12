@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grocery Web — Home</title>
+  <link rel="stylesheet" href="/styles/base.css" />
+  <script src="/scripts/ambient.js" defer></script>
+  <script src="/scripts/session.js" defer></script>
+  <script src="/scripts/location.js" defer></script>
+
+  <style>
+    /* ----------- Best Deals Section -------------- */
+    .deals-section {
+      margin: 60px auto 60px;
+      padding: 0 6%;
+      color: #e2e8f0;
+    }
+    .deals-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .deals-head h2 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: linear-gradient(90deg,#3b82f6,#06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+    }
+
+    /* --- 3–4 per row responsive grid --- */
+    .deals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 28px;
+      justify-content: center;
+    }
+
+    /* --- Card --- */
+    .deal-card {
+      position: relative;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 18px;
+      overflow: hidden;
+      backdrop-filter: blur(16px) saturate(1.4);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .deal-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 18px 40px rgba(37,99,235,0.4);
+      border-color: rgba(59,130,246,0.5);
+    }
+
+    .deal-img {
+      height: 180px;
+      width: 100%;
+      object-fit: cover;
+      background: #e5e7eb;
+      display: block;
+    }
+
+    .deal-body {
+      padding: 16px 18px;
+      flex: 1;
+    }
+
+    .deal-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin: 0 0 6px;
+      color: #f8fafc;
+      min-height: 44px;
+    }
+
+    .deal-meta {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      margin-bottom: 10px;
+    }
+
+    .deal-price {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .deal-price .price {
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: #fff;
+    }
+    .deal-price .strike {
+      text-decoration: line-through;
+      color: #94a3b8;
+      font-size: 0.95rem;
+    }
+
+    /* Store badge */
+    .store-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    .store-badge img {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+    }
+    .store-badge span {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #0b0f1a;
+    }
+
+    /* --- Quote Boxes --- */
+    .quote-section {
+      margin: 70px auto 100px;
+      padding: 0 6%;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 30px;
+    }
+    .quote-box {
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 20px;
+      backdrop-filter: blur(20px) saturate(1.6);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+      padding: 40px 30px;
+      color: #f8fafc;
+      text-align: center;
+      transition: transform .25s ease, box-shadow .25s ease;
+    }
+    .quote-box:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 40px rgba(37,99,235,0.45);
+    }
+    .quote-box h3 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #3b82f6, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .quote-box p {
+      font-size: 1rem;
+      color: #d1d5db;
+      margin: 0;
+    }
+
+    @media (max-width: 600px) {
+      .deals-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; }
+      .deal-img { height: 150px; }
+    }
+  </style>
+</head>
+
+<body id="home-page">
+  <!-- ============ NAVBAR ============ -->
+  <header class="nav glossy-nav">
+    <a class="brand" href="/">
+      <img src="/assets/logo.svg" alt="Logo">
+      <strong>Grocery Web</strong>
+    </a>
+    <nav class="mainnav visible" id="mainnav">
+      <a href="/" class="active">Home</a>
+      <a href="/nearby.html">Nearby Stores</a>
+      <a href="/cart.html">Shopping Cart</a>
+      <a href="/meal-plan.html">Meal Plans</a>
+      <a href="/profile.html">Profile</a>
+    </nav>
+    <button class="loc-pill" id="loc-pill">
+      <img src="/assets/location.svg" alt="📍">
+      <span id="loc-pill-label">Detecting location...</span>
+    </button>
+    <div class="account">
+      <span id="account-guest">
+        <a class="btn-outline" href="/auth/signin.html">Sign In</a>
+        <a style="margin-left:6px" class="btn" href="/auth/signup.html">Sign Up</a>
+      </span>
+      <span id="account-user" style="display:none">
+        <a href="/profile.html">Profile</a>
+        <a id="logout-link" style="margin-left:10px" href="#">Logout</a>
+      </span>
+    </div>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <h1 class="hero-title">Find the Best Grocery Deals Near You</h1>
+    <div class="searchbar">
+      <input id="search" type="text" placeholder="Search products (onion, milk, rice)" />
+      <button class="btn" id="search-btn">Search</button>
+    </div>
+    <div class="chips">
+      <button class="chip">Vegetables</button>
+      <button class="chip">Fruits</button>
+      <button class="chip">Bakery</button>
+      <button class="chip">Dairy</button>
+      <button class="chip">Meat</button>
+      <button class="chip">Snacks</button>
+      <button class="chip">Beverages</button>
+      <button class="chip">Pantry</button>
+    </div>
+  </section>
+
+  <!-- ============ STORES GRID ============ -->
+  <section class="nearby-section">
+    <h2 class="section-title">Stores Near You</h2>
+    <div class="stores-grid">
+      <a class="store-tile" href="/product.html?store=walmart"><img src="https://1000logos.net/wp-content/uploads/2017/05/Walmart-Logo.png" alt="Walmart"><h3>Walmart</h3></a>
+      <a class="store-tile" href="/product.html?store=metro"><img src="https://www.logo.wine/a/logo/Metro_Inc./Metro_Inc.-Logo.wine.svg" alt="Metro"><h3>Metro</h3></a>
+      <a class="store-tile" href="/product.html?store=freshco"><img src="https://indomieca.com/wp-content/uploads/2020/08/Freshco-Resized-1.png" alt="FreshCo"><h3>FreshCo</h3></a>
+      <a class="store-tile" href="/product.html?store=nofrills"><img src="https://upload.wikimedia.org/wikipedia/en/2/23/No_Frills_logo.svg" alt="No Frills"><h3>No Frills</h3></a>
+      <a class="store-tile" href="/product.html?store=foodbasics"><img src="https://montellier.ca/wp-content/uploads/2020/03/Food-Basics-Logo-1.png" alt="Food Basics"><h3>Food Basics</h3></a>
+    </div>
+  </section>
+
+  <!-- ============ BEST DEALS ============ -->
+  <section class="deals-section">
+    <div class="deals-head">
+      <h2>Best Deals</h2>
+      <small class="muted" id="deals-note">Loading deals…</small>
+    </div>
+    <div id="deals-grid" class="deals-grid"></div>
+  </section>
+
+  <!-- ============ QUOTES SECTION ============ -->
+  <section class="quote-section">
+    <div class="quote-box">
+      <h3>Save More. Waste Less.</h3>
+      <p>Discover the smartest way to shop groceries — compare, plan, and save effortlessly.</p>
+    </div>
+    <div class="quote-box">
+      <h3>Shop Smart. Eat Fresh.</h3>
+      <p>Fresh deals from nearby stores help you enjoy quality ingredients without overspending.</p>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">© 2025 Grocery Web — Compare Smarter.</footer>
+
+  <script>
+    const STORE_META = {
+      walmart: { id: 'walmart', name: 'Walmart', logo: 'https://upload.wikimedia.org/wikipedia/commons/b/b1/Walmart_logo_%282008%29.svg', api: '/api/vendors/walmart' },
+      metro: { id: 'metro', name: 'Metro', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/Metro_Inc._logo.svg', api: '/api/vendors/metro' },
+      freshco: { id: 'freshco', name: 'FreshCo', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/FreshCo_logo.svg', api: '/api/vendors/freshco' },
+      nofrills: { id: 'nofrills', name: 'No Frills', logo: 'https://upload.wikimedia.org/wikipedia/en/2/23/No_Frills_logo.svg', api: '/api/vendors/nofrills' },
+      foodbasics: { id: 'foodbasics', name: 'Food Basics', logo: 'https://upload.wikimedia.org/wikipedia/en/4/47/Food_Basics_logo.svg', api: '/api/vendors/foodbasics' }
+    };
+
+    function normalizeProduct(p, storeId){
+      const name = p.title || p.name;
+      const img = p.imageUrl || p.image;
+      const price = p.price;
+      return { name, img, price, storeId, unit: p.unit || '' };
+    }
+
+    function fmtPrice(v){ return `$${Number(v).toFixed(2)}`; }
+
+    function dealCard(deal){
+      const meta = STORE_META[deal.storeId];
+      const a = document.createElement('a');
+      a.className = 'deal-card';
+      a.href = `/product.html?store=${deal.storeId}`;
+      a.innerHTML = `
+        <div class="store-badge"><img src="${meta.logo}" alt=""><span>${meta.name}</span></div>
+        <img class="deal-img" src="${deal.img || 'https://dummyimage.com/600x400/e2e8f0/9ca3af.png&text=Product'}" alt="${deal.name}">
+        <div class="deal-body">
+          <p class="deal-title">${deal.name}</p>
+          <div class="deal-meta">${deal.unit}</div>
+          <div class="deal-price"><span class="price">${fmtPrice(deal.price)}</span></div>
+        </div>`;
+      return a;
+    }
+
+    async function loadDeals(){
+      const grid = document.getElementById('deals-grid');
+      const note = document.getElementById('deals-note');
+      const stores = Object.values(STORE_META);
+      const data = (await Promise.all(stores.map(async s=>{
+        try{
+          const r = await fetch(s.api);
+          if(!r.ok) throw 0;
+          const json = await r.json();
+          const items = Array.isArray(json)?json:json.products||[];
+          return items.slice(0,5).map(p=>normalizeProduct(p,s.id)); // get more per store
+        }catch{return [];}
+      }))).flat();
+      if(!data.length){ note.textContent='No deals found.'; return; }
+      data.sort((a,b)=>a.price-b.price);
+      const subset = data.slice(0,12); // show 12
+      grid.innerHTML=''; subset.forEach(d=>grid.appendChild(dealCard(d)));
+      note.textContent=`Showing ${subset.length} top deals.`;
+    }
+    loadDeals();
+  </script>
+</body>
+</html>

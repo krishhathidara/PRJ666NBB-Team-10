@@ -1,0 +1,254 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap');
+
+body.signin-body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Inter", "Nunito Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  overflow: hidden;
+  background: radial-gradient(circle at 65% 35%, #b4d4e2 0%, #6d8b9c 25%, #2f4653 55%, #14222e 100%);
+  /* ⬆️ slightly brighter + smoother gradient transition */
+}
+
+/* ---------- CONTAINER ---------- */
+.signin-container {
+  display: flex;
+  width: 88%;
+  max-width: 1150px;
+  height: 640px;
+  border-radius: 36px;
+  overflow: visible;
+  position: relative;
+  box-shadow: 0 0 70px rgba(0, 0, 0, 0.4);
+  background: transparent;
+}
+
+/* ---------- LEFT SIDE ---------- */
+.left-section {
+  flex: 1.15;
+  background: linear-gradient(160deg, #164057 0%, #1b4b5f 40%, #14384b 100%);
+  /* ⬆️ lighter + richer blue tone like reference */
+  border-top-left-radius: 36px;
+  border-bottom-left-radius: 36px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 70px 70px 0 80px;
+  z-index: 3;
+  overflow: visible;
+}
+
+/* ---------- TEXT ---------- */
+.left-content {
+  position: relative;
+  z-index: 4;
+  text-align: left;
+  color: white;
+  margin-top: -40px;
+  animation: fadeInLeft 1.2s ease;
+  max-width: 480px;
+}
+
+.left-content h1 {
+  font-size: 3.6rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 20px;
+  letter-spacing: -0.5px;
+}
+
+.left-content p {
+  font-size: 1.2rem;
+  color: #e2f2ff;
+  font-weight: 500;
+  line-height: 1.7;
+}
+
+/* ---------- IMAGE ---------- */
+.items-img {
+  position: absolute;
+  bottom: -80px;
+  left: -150px;
+  width: 640px;
+  z-index: 2;
+  filter: drop-shadow(0 25px 40px rgba(0, 0, 0, 0.5));
+  animation: fadeInUp 1.2s ease;
+  pointer-events: none;
+  transition: transform 0.4s ease;
+}
+.items-img:hover {
+  transform: scale(1.04);
+}
+
+/* ---------- RIGHT SIDE ---------- */
+.right-section {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-top-right-radius: 36px;
+  border-bottom-right-radius: 36px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ---------- GLASS BOX ---------- */
+.glass-panel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 70px 55px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  box-shadow:
+    0 0 60px rgba(255, 255, 255, 0.15),
+    inset 0 0 40px rgba(255, 255, 255, 0.1);
+  border-top-right-radius: 36px;
+  border-bottom-right-radius: 36px;
+}
+
+.glass-panel::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 42px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.8), rgba(140,180,255,0.3));
+  filter: blur(35px);
+  opacity: 0.9;
+  z-index: -1;
+}
+
+/* ---------- TEXT ---------- */
+.glass-panel h2 {
+  font-size: 2.3rem;
+  font-weight: 800;
+  color: #1b1c1d;
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+
+.glass-panel p {
+  color: #4b5563;
+  font-size: 1.05rem;
+  font-weight: 500;
+  margin-bottom: 26px;
+}
+
+/* ---------- INPUTS ---------- */
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  margin-bottom: 14px;
+  font-size: 1rem;
+  color: #111827;
+  outline: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.input:focus {
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+}
+
+/* ---------- BUTTON ---------- */
+.neon-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  cursor: pointer;
+  transition: 0.3s;
+  box-shadow: 0 0 12px rgba(34,197,94,0.4), inset 0 -2px 0 rgba(0,0,0,0.1);
+}
+.neon-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(34,197,94,0.6);
+}
+
+/* ---------- LINKS ---------- */
+.small-links {
+  text-align: center;
+  margin-top: 14px;
+  color: #4b5563;
+  font-weight: 500;
+}
+.small-links a {
+  color: #22c55e;
+  text-decoration: none;
+  font-weight: 700;
+}
+.small-links a:hover { text-decoration: underline; }
+
+/* ---------- DIVIDER ---------- */
+.divider {
+  margin: 25px 0;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.9rem;
+  position: relative;
+}
+.divider::before, .divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 36%;
+  height: 1px;
+  background: rgba(255,255,255,0.25);
+}
+.divider::before { left: 0; }
+.divider::after { right: 0; }
+
+/* ---------- GOOGLE BUTTON ---------- */
+.oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 600;
+  color: #111827;
+  text-decoration: none;
+  transition: 0.3s;
+}
+.oauth-btn:hover {
+  transform: scale(1.03);
+  background: #f8fafc;
+}
+.google-icon { width: 22px; height: 22px; }
+
+/* ---------- ANIMATIONS ---------- */
+@keyframes fadeInLeft {
+  0% { opacity: 0; transform: translateX(-40px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(40px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 950px) {
+  .signin-container { flex-direction: column; height: auto; }
+  .left-section { display: none; }
+  .right-section {
+    width: 90%;
+    height: auto;
+    border-radius: 30px;
+  }
+  .glass-panel { padding: 50px 40px; }
+}
