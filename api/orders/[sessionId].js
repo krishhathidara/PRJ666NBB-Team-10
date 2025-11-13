@@ -1,67 +1,76 @@
 // api/orders/[sessionId].js
-const { getDb } = require('../_db.js');
-const { getUserFromReq } = require('../_auth.js');
+const { getDb } = require("../_db.js");
+const { getUserFromReq } = require("../_auth.js");
 
 module.exports = async (req, res) => {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET");
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const user = getUserFromReq(req);
-    if (!user) {
-      console.log('No user found in request for order retrieval');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Try *every* place a session id might live
-    const sessionId =
-      (req.query &&
-        (req.query.sessionId || req.query.session_id || req.query.id)) ||
-      (req.params &&
-        (req.params.sessionId || req.params.session_id || req.params.id)) ||
-      extractSessionIdFromUrl(req.url);
+    const sessionId = getSessionIdFromRequest(req);
 
     if (!sessionId) {
-      console.log('Missing sessionId in /api/orders/[sessionId]', {
+      console.log("Missing sessionId in /api/orders/[sessionId]", {
         query: req.query,
-        params: req.params,
         url: req.url,
       });
-      return res.status(400).json({ error: 'Missing sessionId' });
+      return res.status(400).json({ error: "Missing sessionId" });
     }
 
     const db = await getDb();
-    const orders = db.collection('orders');
+    const orders = db.collection("orders");
 
-    const order = await orders.findOne({
-      stripeSessionId: sessionId,
-      userId: user.id,
-    });
+    const user = getUserFromReq(req);
 
-    if (!order) {
-      console.log('Order not found', { sessionId, userId: user.id });
-      return res.status(404).json({ error: 'Order not found' });
+    let order = null;
+
+    // If we know the user, try a strict match first
+    if (user && user.id) {
+      order = await orders.findOne({
+        stripeSessionId: sessionId,
+        userId: user.id,
+      });
     }
 
-    // Convert _id to string so JSON is clean
+    // Fallback: allow lookup just by Stripe session id
+    if (!order) {
+      order = await orders.findOne({ stripeSessionId: sessionId });
+    }
+
+    if (!order) {
+      console.log("Order not found", {
+        sessionId,
+        userId: user ? user.id : null,
+      });
+      return res.status(404).json({ error: "Order not found" });
+    }
+
     if (order._id) {
       order._id = String(order._id);
     }
 
     return res.status(200).json(order);
   } catch (err) {
-    console.error('Get order error:', err);
-    return res.status(500).json({ error: 'Server error: ' + err.message });
+    console.error("Get order error:", err);
+    return res.status(500).json({ error: "Server error: " + err.message });
   }
 };
 
-// Fallback: pull the id from the raw URL path
-function extractSessionIdFromUrl(url = '') {
+function getSessionIdFromRequest(req) {
   try {
-    const clean = url.split('?')[0];        // /api/orders/cs_test_123
-    const parts = clean.split('/').filter(Boolean);
-    return decodeURIComponent(parts[parts.length - 1] || '');
+    // Vercel / Node serverless: dynamic route param lives in query
+    const q = req.query || {};
+    if (q.sessionId || q.session_id || q.id) {
+      return q.sessionId || q.session_id || q.id;
+    }
+
+    // Fallback: parse from raw URL path (/api/orders/cs_test_123)
+    const url = req.url || "";
+    const clean = url.split("?")[0]; // /api/orders/cs_test_123
+    const parts = clean.split("/").filter(Boolean);
+    return decodeURIComponent(parts[parts.length - 1] || "");
   } catch {
     return null;
   }
