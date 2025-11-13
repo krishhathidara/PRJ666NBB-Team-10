@@ -1,0 +1,188 @@
+/* Cart page overrides (dark/glassy, matches your totals card) */
+:root{
+  --panel: rgba(10,23,35,0.68);
+  --panel-deeper: rgba(7,16,25,0.78);
+  --panelBorder: rgba(255,255,255,.08);
+  --panelShadow: 0 12px 40px rgba(0,0,0,.38);
+  --muted: #9fb4c9;
+  --text: #e3edf9;
+  --brand: #58a9ff;          /* soft blue accent */
+  --brand-strong: #2e87ff;   /* deeper blue for hovers */
+  --ok: #34d399;
+  --err:#f87171;
+}
+
+.cart-section{ margin-top:36px; }
+.cart-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin-bottom:14px;
+}
+.chip{
+  display:inline-flex; align-items:center;
+  padding:6px 10px; border-radius:999px;
+  background: rgba(255,255,255,0.08); color: var(--text);
+  font-size:.95rem; opacity:.85;
+}
+
+/* ---------------- Store grouping ---------------- */
+.cart-stores{ display:flex; flex-direction:column; gap:12px; }
+
+/* A store block is its own dark glass card */
+.store-card{
+  background: var(--panel);
+  border: 1px solid var(--panelBorder);
+  box-shadow: var(--panelShadow), inset 0 0 0 1px rgba(255,255,255,.02);
+  backdrop-filter: blur(10px);
+  border-radius: 18px;
+  padding: 10px 12px 12px;
+}
+
+/* Store header */
+.store-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding: 6px 4px 10px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.store-name{
+  font-weight:800; letter-spacing:.2px; color: var(--text);
+}
+.store-right{ display:flex; align-items:center; gap:8px; }
+.store-badge{
+  display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px;
+  background: rgba(255,255,255,.08); color: var(--text); font-size:.85rem;
+}
+.store-sub{ color:#cfe6ff; font-weight:700; }
+
+/* Items inside a store */
+.store-body{ margin-top:8px; }
+
+/* Row (no white!) */
+.cart-row{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  align-items:center;
+  gap:14px;
+  padding:14px 12px;
+  border-radius:16px;
+  background: var(--panel-deeper) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  margin:10px 0;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+}
+.cart-left .cart-title{ font-weight:700; color: var(--text); }
+.cart-left .muted{ color: var(--muted); margin-top:2px; }
+
+/* Right controls */
+.cart-right{ display:flex; align-items:center; gap:16px; }
+
+/* Price — strong, readable */
+.cart-price{
+  min-width:110px; text-align:right; font-weight:800;
+  background: linear-gradient(180deg, #bfe0ff 0%, #8fc1ff 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* Quantity stepper */
+.quantity-control{
+  display:inline-flex; align-items:center; gap:8px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.05);
+  padding:6px; border-radius:12px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.quantity-control .btn-outline{
+  height:34px; width:34px; padding:0; display:grid; place-items:center;
+  font-size:18px; font-weight:800;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.20);
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  transition: .15s ease;
+}
+.quantity-control .btn-outline:hover{
+  border-color: var(--brand); background: rgba(88,169,255,.12);
+  color: #fff;
+}
+.qty{
+  width:60px; text-align:center; background:transparent; color: var(--text);
+  border:1px solid rgba(255,255,255,.20); border-radius:8px; height:34px; font-weight:700;
+}
+
+/* Trash button */
+.cart-row .remove{
+  height:36px; width:36px; display:grid; place-items:center;
+  background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.18);
+  border-radius:10px; cursor:pointer; transition:.15s ease;
+}
+.cart-row .remove:hover{
+  background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.45);
+}
+.cart-row .remove svg{ width:18px; height:18px; stroke:#e2e8f0; }
+
+/* Totals */
+.totals{ position: sticky; bottom: 16px; margin-top:14px; }
+.totals .tot-row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 2px; border-bottom:1px solid rgba(255,255,255,.06);
+  color: var(--text);
+}
+.totals .tot-row:last-of-type{ border-bottom:none; }
+.totals .tot-strong{ font-weight:800; font-size:1.06rem; }
+
+/* Override default green .btn ONLY here */
+.totals .checkout{
+  width:100%; margin-top:14px;
+  background: linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%);
+  color:#fff; border:none;
+  box-shadow: 0 8px 24px rgba(46,135,255,.35), inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.totals .checkout:hover{ filter: brightness(1.08); }
+.totals .checkout:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; }
+
+/* Empty / Loading */
+.empty-cart, .loading{
+  text-align:center; color: var(--muted);
+  font-size:1.05rem; padding:18px; margin:6px 0 8px;
+}
+
+/* Toasts */
+#toast-root .message{
+  position: fixed; top: 80px; right: 20px;
+  padding: 10px 20px; border-radius: 10px; color:#fff;
+  font-weight:600; z-index:1000; transition: opacity .4s ease;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+#toast-root .message.success{ background:#22c55e; }
+#toast-root .message.error{ background:#ef4444; }
+
+/* Skeletons */
+.skel-store{
+  background: var(--panel);
+  border: 1px solid var(--panelBorder);
+  box-shadow: var(--panelShadow), inset 0 0 0 1px rgba(255,255,255,.02);
+  border-radius: 18px; padding: 10px 12px 12px; margin: 0 0 12px 0;
+}
+.skel-head{ display:flex; justify-content:space-between; padding:6px 4px 10px; border-bottom:1px solid rgba(255,255,255,.06); }
+.skel{
+  height:14px; border-radius:8px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,.05) 0%,
+    rgba(255,255,255,.12) 50%,
+    rgba(255,255,255,.05) 100%);
+  background-size:200% 100%;
+  animation: shine 1.15s linear infinite;
+}
+.skel.w60{ width:60%; } .skel.w40{ width:40%; } .skel.w30{ width:30%; } .skel.w20{ width:20%; }
+
+.skel-row{
+  display:grid; grid-template-columns:1fr auto; gap:14px;
+  padding:14px 12px; border-radius:16px; margin:10px 0;
+  background: var(--panel-deeper);
+  border:1px solid rgba(255,255,255,.10);
+}
+@keyframes shine{ to{ background-position:-200% 0; } }
+
+@media (max-width: 640px){
+  .cart-right{ gap:10px; }
+  .cart-price{ min-width:auto; }
+}

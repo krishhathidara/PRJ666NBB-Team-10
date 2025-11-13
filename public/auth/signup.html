@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign Up | Grocery Web</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/styles/auth.css" />
+</head>
+<body class="signin-body">
+  <div class="signin-container">
+    
+    <!-- LEFT SIDE -->
+    <div class="left-section">
+      <div class="left-content">
+        <h1>Join the Smart Grocery Revolution 🥦</h1>
+        <p>Compare prices, build meal plans, and save more effortlessly with Grocery Web.</p>
+      </div>
+      <img src="../assets/items3.png" alt="groceries" class="items-img">
+    </div>
+
+    <!-- RIGHT SIDE -->
+    <div class="right-section">
+      <div class="glass-panel">
+        <h2>Create Account</h2>
+        <p>Sign up to start comparing prices and planning AI-powered meals.</p>
+
+        <!-- ✅ Sign-Up Form -->
+        <input type="text" id="name" class="input" placeholder="Full Name" required />
+        <input type="email" id="email" class="input" placeholder="Email" required />
+        <input type="password" id="password" class="input" placeholder="Password (min 6 chars)" minlength="6" required />
+        <button id="signup-btn" class="neon-btn">Create Account</button>
+
+        <div id="signup-error" style="color:#f87171; margin-top:10px; font-size:0.9rem; display:none;"></div>
+
+        <div class="small-links">
+          Already have an account? <a href="/auth/signin.html">Sign In</a>
+        </div>
+
+        <div class="divider">OR</div>
+
+        <!-- ✅ Google OAuth -->
+        <a href="/api/auth/google" class="oauth-btn">
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" class="google-icon">
+          Continue with Google
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ✅ Functionality -->
+  <script>
+    const signupBtn = document.getElementById('signup-btn');
+    const nameInput = document.getElementById('name');
+    const emailInput = document.getElementById('email');
+    const passInput = document.getElementById('password');
+    const errorBox = document.getElementById('signup-error');
+
+    signupBtn.addEventListener('click', async () => {
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+      const password = passInput.value.trim();
+
+      if (!name || !email || !password) {
+        errorBox.textContent = "Please fill in all fields.";
+        errorBox.style.display = "block";
+        return;
+      }
+
+      signupBtn.textContent = "Creating account...";
+      signupBtn.disabled = true;
+      errorBox.style.display = "none";
+
+      try {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Signup failed. Try again.");
+        }
+
+        // ✅ Redirect after successful signup
+        window.location.href = "/profile.html";
+
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = "block";
+      } finally {
+        signupBtn.textContent = "Create Account";
+        signupBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

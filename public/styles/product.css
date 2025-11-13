@@ -1,0 +1,136 @@
+/* ===========================
+   PAGE BACKGROUND & NAV
+   =========================== */
+#product-page{
+  background:
+    radial-gradient(1200px 800px at 75% -10%, #60a5fa33 0%, #1d4ed8 40%, #0f172a 100%),
+    linear-gradient(180deg, #0b1220 0%, #0f172a 60%, #0b1220 100%);
+  background-attachment: fixed;
+}
+#product-page .ambient{
+  position:fixed; inset:-20% -10% auto -10%;
+  height:520px; pointer-events:none; filter:blur(60px) saturate(1.2);
+  background:
+    radial-gradient(600px 300px at 30% 40%, #22d3ee55, transparent 60%),
+    radial-gradient(500px 280px at 70% 10%, #60a5fa55, transparent 60%),
+    radial-gradient(400px 220px at 80% 50%, #22c55e44, transparent 60%);
+  opacity:.85; z-index:0;
+}
+/* navbar already styled in base.css (glossy-nav) */
+
+/* Layout */
+.product-container{ max-width:1200px; padding:18px 18px 120px }
+.product-head .product-title{
+  margin:0; font-weight:800; color:#e2e8f0;
+  text-shadow:0 1px 0 rgba(0,0,0,.25);
+}
+.badge-store{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 12px; border-radius:999px; font-weight:700;
+  background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+  border:1px solid rgba(255,255,255,.25);
+  color:#e2e8f0;
+}
+
+/* ===========================
+   CATEGORIES (glassy panel)
+   =========================== */
+.card-block{
+  margin-top:16px; padding:20px; border-radius:16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+  border:1px solid rgba(255,255,255,.25);
+  box-shadow: 0 18px 38px rgba(2,6,23,.35), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.cat-lead{ color:#dbeafe; margin:0 0 14px; font-weight:600 }
+.cat-grid{
+  display:grid; gap:16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.cat-card{
+  min-height:98px; padding:18px; position:relative; overflow:hidden;
+  display:flex; align-items:center; gap:14px; cursor:pointer;
+  border-radius:14px; border:1px solid rgba(255,255,255,.25);
+  background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.1));
+  transition: transform .2s ease, box-shadow .28s ease, border-color .2s ease;
+}
+.cat-card:hover{ transform:translateY(-4px); box-shadow:0 16px 34px rgba(2,6,23,.45) }
+.cat-card .cat-emoji{
+  width:56px; height:56px; border-radius:14px; display:grid; place-items:center;
+  font-size:1.7rem; background: rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.3);
+}
+.cat-card .cat-text h4{ margin:0; color:#eef2ff; font-weight:800 }
+.cat-card .cat-text small{ color:#c7d2fe }
+
+/* skeleton */
+.skeleton{
+  background: linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.34), rgba(255,255,255,.18));
+  background-size:180% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+  border-radius:14px;
+}
+@keyframes shimmer{ 0%{background-position:180% 0} 100%{background-position:-20% 0} }
+
+/* ===========================
+   PRODUCTS (standalone cards)
+   =========================== */
+.prd-edge{ margin-top:18px }
+.prd-grid{
+  display:grid; gap:20px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items:stretch; /* equal heights via card flex */
+}
+
+/* Large, uniform product card */
+.prd-card{
+  display:flex; flex-direction:column;
+  border-radius:18px; overflow:hidden;
+  background:#fff;
+  border:1px solid rgba(15,23,42,.08);
+  box-shadow: 0 10px 30px rgba(2,8,23,.18);
+  transform: translateZ(0);
+  transition: transform .18s ease, box-shadow .25s ease, border-color .2s ease;
+}
+.prd-card:hover{
+  transform: translateY(-6px);
+  box-shadow: 0 18px 44px rgba(2,8,23,.26);
+  border-color:#c7d2fe;
+}
+
+/* 16:9 media height (responsive) */
+.prd-img{
+  width:100%;
+  aspect-ratio: 16 / 9;      /* keeps same height for all cards */
+  object-fit:cover;
+  background:#e2e8f0;
+}
+
+/* body fills remaining height; actions stick to bottom */
+.prd-body{
+  display:flex; flex-direction:column;
+  padding:16px 18px 18px;
+  min-height: 160px;         /* consistent body height */
+}
+.prd-name{ margin:0 0 6px; font-weight:800; font-size:1.05rem; color:#0b1220 }
+.prd-meta{ color:#475569; font-size:.92rem; margin-bottom:10px }
+.prd-bottom{ margin-top:auto; display:flex; align-items:center; gap:10px; justify-content:space-between }
+.prd-price{ font-weight:900; font-size:1.15rem; color:#0b1220 }
+
+/* CTA */
+.btn-add{
+  border:none; cursor:pointer;
+  padding:10px 14px; font-weight:800; border-radius:12px;
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  color:#fff;
+  box-shadow: 0 8px 16px rgba(37,99,235,.28);
+  transition: transform .12s ease, box-shadow .18s ease;
+}
+.btn-add:hover{ transform:translateY(-2px); box-shadow:0 12px 22px rgba(37,99,235,.36) }
+.btn-add:active{ transform:translateY(0) }
+
+/* Footer note */
+.pg-footer{ text-align:center; color:#cbd5e1; margin-top:14px }
+
+/* responsive tweaks */
+@media (max-width:720px){
+  .prd-grid{ grid-template-columns: 1fr; }
+}
