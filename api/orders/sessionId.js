@@ -1,10 +1,11 @@
-// api/orders/[sessionId].js
+// api/orders/sessionId.js
 const { getDb } = require("../_db.js");
 const { getUserFromReq } = require("../_auth.js");
 
 module.exports = async (req, res) => {
-  if (req.method !== "GET") {
-    res.setHeader("Allow", "GET");
+  // Only allow GET
+  if (req.method && req.method !== "GET") {
+    if (res.setHeader) res.setHeader("Allow", "GET");
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -12,7 +13,7 @@ module.exports = async (req, res) => {
     const sessionId = getSessionIdFromRequest(req);
 
     if (!sessionId) {
-      console.log("Missing sessionId in /api/orders/[sessionId]", {
+      console.log("Missing sessionId in /api/orders/sessionId", {
         query: req.query,
         url: req.url,
       });
@@ -26,7 +27,7 @@ module.exports = async (req, res) => {
 
     let order = null;
 
-    // If we know the user, try a strict match first
+    // If we know the user, try strict match first
     if (user && user.id) {
       order = await orders.findOne({
         stripeSessionId: sessionId,
@@ -34,7 +35,7 @@ module.exports = async (req, res) => {
       });
     }
 
-    // Fallback: allow lookup just by Stripe session id
+    // Fallback: match just by Stripe session id
     if (!order) {
       order = await orders.findOne({ stripeSessionId: sessionId });
     }
@@ -60,15 +61,17 @@ module.exports = async (req, res) => {
 
 function getSessionIdFromRequest(req) {
   try {
-    // Vercel / Node serverless: dynamic route param lives in query
     const q = req.query || {};
+
+    // From query string: ?sessionId=... or ?session_id=... or ?id=...
     if (q.sessionId || q.session_id || q.id) {
       return q.sessionId || q.session_id || q.id;
     }
 
-    // Fallback: parse from raw URL path (/api/orders/cs_test_123)
+    // Fallback: from raw URL path (works both on Vercel & Express):
+    // /api/orders/sessionId?sessionId=...
     const url = req.url || "";
-    const clean = url.split("?")[0]; // /api/orders/cs_test_123
+    const clean = url.split("?")[0];
     const parts = clean.split("/").filter(Boolean);
     return decodeURIComponent(parts[parts.length - 1] || "");
   } catch {
