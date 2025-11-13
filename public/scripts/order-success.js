@@ -28,10 +28,7 @@ async function initReceiptPage() {
     pdfBtn.addEventListener("click", handleDownloadPdf);
   }
 
-  // Optional API base (for external backend): set window.__API_BASE__ in HTML
-  const API_BASE = window.__API_BASE__ || "";
-
-  // ----- Read session id from URL -----
+  // ===== Get session id from URL (support multiple param names) =====
   const params = new URLSearchParams(window.location.search);
   const sessionId =
     params.get("session_id") ||
@@ -47,33 +44,24 @@ async function initReceiptPage() {
     return;
   }
 
-  console.log("[Receipt] Session id from URL:", sessionId);
-
   try {
     if (statusLabel) statusLabel.textContent = "Loading receipt…";
 
-    const url = `${API_BASE}/api/orders/sessionId?sessionId=${encodeURIComponent(
-      sessionId
-    )}`;
-    console.log("[Receipt] Fetching order from:", url);
-
-    const res = await fetch(url, {
+    const res = await fetch(`/api/orders/${encodeURIComponent(sessionId)}`, {
       method: "GET",
       credentials: "include",
     });
 
     const text = await res.text();
     let data;
-
     try {
       data = JSON.parse(text);
     } catch {
-      console.warn("[Receipt] Non-JSON response:", text.slice(0, 200));
-      throw new Error(`Unexpected response from server (HTTP ${res.status})`);
+      throw new Error("Unexpected response from server: " + text.slice(0, 120));
     }
 
     if (!res.ok) {
-      throw new Error(data.error || `Failed to load order (HTTP ${res.status})`);
+      throw new Error(data.error || "Failed to load order");
     }
 
     const order = data;
@@ -280,15 +268,21 @@ async function initReceiptPage() {
       const imgWidth = pageWidth - margin * 2;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      const y = margin;
-
+      let y = margin;
       if (imgHeight > pageHeight - margin * 2) {
-        // Multi-page
+        // multi-page (very long carts)
         let remainingHeight = imgHeight;
         let position = margin;
 
         while (remainingHeight > 0) {
-          pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
+          pdf.addImage(
+            imgData,
+            "PNG",
+            margin,
+            position,
+            imgWidth,
+            imgHeight
+          );
           remainingHeight -= pageHeight - margin * 2;
           if (remainingHeight > 0) {
             pdf.addPage();
