@@ -1,19 +1,24 @@
-import path from 'path';
-import fs from 'fs/promises';
+// /api/vendors/metro.js
+// Server-side proxy for Metro. Uses METRO_API_URL.
 
 export default async function handler(req, res) {
+  // Cache at the edge for 1 minute, allow stale while revalidating
+  res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
+
+  const url = process.env.METRO_API_URL; // e.g. https://mock-metro-xxxx.vercel.app/api/products
+  if (!url) {
+    res.status(500).json({ error: "METRO_API_URL is not set" });
+    return;
+  }
+
   try {
-    const filePath = path.join(process.cwd(), 'mock-metro', 'data', 'products.json');
-    const data = await fs.readFile(filePath, 'utf-8');
-    const json = JSON.parse(data);
+    const upstream = await fetch(url, { headers: { Accept: "application/json" } });
+    const text = await upstream.text();
 
-    if (!json || !Array.isArray(json.products)) {
-      return res.status(500).json({ error: "Malformed product data" });
-    }
-
-    res.status(200).json(json);
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.status(upstream.status).send(text);
   } catch (err) {
-    console.error("Failed to load Metro data:", err.message);
-    res.status(500).json({ error: "Metro data fetch failed" });
+    console.error("Proxy metro error:", err);
+    res.status(502).json({ error: "Failed to fetch Metro data" });
   }
 }
