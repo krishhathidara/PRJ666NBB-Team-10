@@ -47,7 +47,15 @@ async function initReceiptPage() {
   try {
     if (statusLabel) statusLabel.textContent = "Loading receipt…";
 
-    const res = await fetch(`/api/orders/${encodeURIComponent(sessionId)}`, {
+    // *** IMPORTANT: use the query-based endpoint that exists on Vercel ***
+    const apiUrl = `/api/orders/sessionId?sessionId=${encodeURIComponent(
+      sessionId
+    )}`;
+
+    console.log("[Receipt] Session id from URL:", sessionId);
+    console.log("[Receipt] Fetching order from:", apiUrl);
+
+    const res = await fetch(apiUrl, {
       method: "GET",
       credentials: "include",
     });
@@ -57,7 +65,9 @@ async function initReceiptPage() {
     try {
       data = JSON.parse(text);
     } catch {
-      throw new Error("Unexpected response from server: " + text.slice(0, 120));
+      throw new Error(
+        "Unexpected response from server: " + text.slice(0, 120)
+      );
     }
 
     if (!res.ok) {
@@ -275,14 +285,7 @@ async function initReceiptPage() {
         let position = margin;
 
         while (remainingHeight > 0) {
-          pdf.addImage(
-            imgData,
-            "PNG",
-            margin,
-            position,
-            imgWidth,
-            imgHeight
-          );
+          pdf.addImage(imgData, "PNG", margin, position, imgWidth, imgHeight);
           remainingHeight -= pageHeight - margin * 2;
           if (remainingHeight > 0) {
             pdf.addPage();
