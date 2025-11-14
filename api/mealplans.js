@@ -1,124 +1,163 @@
 // /api/mealplans.js
-const express = require("express");
+// CRUD for user meal plans. Works in Vercel serverless + local dev (server.local.js).
+
 const { ObjectId } = require("mongodb");
 const { getDb } = require("./_db");
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
+const { getUserFromReq } = require("./_auth");
 
-const router = express.Router();
-
-// Helper: extract user email from cookie token
-function getUserEmailFromCookie(req) {
+function getIdFromReq(req) {
   try {
-    const cookieHeader = req.headers.cookie || "";
-    const tokenCookie = cookieHeader
-      .split(";")
-      .find(c => c.trim().startsWith((process.env.AUTH_COOKIE || "app_session") + "="));
+    const url = (req.url || "").split("?")[0];
+    const parts = url.split("/").filter(Boolean);
 
-    if (!tokenCookie) return null;
-    const token = tokenCookie.split("=")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
-    return decoded?.email || null;
+    // Express mounted as app.use("/api/mealplans", handler):
+    //   "/"       -> []
+    //   "/123"    -> ["123"]
+    // Vercel direct:
+    //   "/api/mealplans"      -> ["api","mealplans"]
+    //   "/api/mealplans/123"  -> ["api","mealplans","123"]
+    if (!parts.length) return null;
+    const last = parts[parts.length - 1];
+    if (last === "mealplans") return null;
+    return last;
   } catch {
     return null;
   }
 }
 
-// ---------- GET all meal plans for user ----------
-router.get("/", async (req, res) => {
-  try {
-    const email = getUserEmailFromCookie(req);
-    if (!email) return res.status(401).json({ error: "Not authenticated" });
+function serialize(plan) {
+  if (!plan) return null;
+  return {
+    _id: plan._id?.toString(),
+    userId: plan.userId,
+    userEmail: plan.userEmail,
+    name: plan.name,
+    description: plan.description || "",
+    ingredients: Array.isArray(plan.ingredients) ? plan.ingredients : [],
+    cost: typeof plan.cost === "number" ? plan.cost : 0,
+    type: plan.type || "Custom",
+    createdAt: plan.createdAt,
+    updatedAt: plan.updatedAt,
+  };
+}
 
-    const db = await getDb();
-    const mealplans = db.collection("mealplans");
-    const plans = await mealplans.find({ userEmail: email }).toArray();
-
-    res.status(200).json(plans);
-  } catch (err) {
-    console.error("GET mealplans error:", err);
-    res.status(500).json({ error: "Server error: " + err.message });
+module.exports = async function handler(req, res) {
+  if (!["GET", "POST", "PUT", "DELETE"].includes(req.method)) {
+    if (res.setHeader) res.setHeader("Allow", "GET,POST,PUT,DELETE");
+    return res.status(405).json({ error: "Method not allowed" });
   }
-});
 
-// ---------- POST create new plan ----------
-router.post("/", async (req, res) => {
-  try {
-    const email = getUserEmailFromCookie(req);
-    if (!email) return res.status(401).json({ error: "Not authenticated" });
-
-    const { name, description, ingredients, cost } = req.body || {};
-    if (!name || !ingredients)
-      return res.status(400).json({ error: "Missing required fields" });
-
-    const db = await getDb();
-    const mealplans = db.collection("mealplans");
-
-    await mealplans.insertOne({
-      name,
-      description: description || "",
-      ingredients,
-      cost: cost || 0,
-      userEmail: email,
-      createdAt: new Date(),
-    });
-
-    res.status(200).json({ success: true });
-  } catch (err) {
-    console.error("POST mealplans error:", err);
-    res.status(500).json({ error: "Server error: " + err.message });
+  const user = getUserFromReq(req);
+  if (!user || !user.id || !user.email) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
-});
 
-// ---------- PUT update existing plan ----------
-router.put("/:id", async (req, res) => {
+  const db = await getDb();
+  const col = db.collection("mealplans");
+  const idParam = getIdFromReq(req);
+
   try {
-    const email = getUserEmailFromCookie(req);
-    if (!email) return res.status(401).json({ error: "Not authenticated" });
+    if (req.method === "GET") {
+      if (idParam) {
+        let plan;
+        try {
+          plan = await col.findOne({
+            _id: new ObjectId(idParam),
+            userId: user.id,
+          });
+        } catch {
+          return res.status(404).json({ error: "Plan not found" });
+        }
+        if (!plan) return res.status(404).json({ error: "Plan not found" });
+        return res.status(200).json(serialize(plan));
+      }
 
-    const db = await getDb();
-    const mealplans = db.collection("mealplans");
-    const { id } = req.params;
-    const { name, description, ingredients, cost } = req.body || {};
+      const plans = await col
+        .find({ userId: user.id })
+        .sort({ createdAt: -1 })
+        .toArray();
+      return res.status(200).json(plans.map(serialize));
+    }
 
-    const result = await mealplans.updateOne(
-      { _id: new ObjectId(id), userEmail: email },
-      { $set: { name, description, ingredients, cost, updatedAt: new Date() } }
-    );
+    // Parse body (both serverless + express.json)
+    const body =
+      req.body && typeof req.body === "object" ? req.body : {};
 
-    if (result.matchedCount === 0)
-      return res.status(404).json({ error: "Meal plan not found or not yours" });
+    if (req.method === "POST") {
+      const { name, description, ingredients, cost } = body;
+      if (!name || !Array.isArray(ingredients) || !ingredients.length) {
+        return res.status(400).json({ error: "Missing name or ingredients" });
+      }
 
-    res.status(200).json({ success: true });
+      const now = new Date();
+      const doc = {
+        userId: user.id,
+        userEmail: user.email,
+        name: String(name),
+        description: String(description || ""),
+        ingredients: ingredients.map(String),
+        cost: Number(cost) || 0,
+        type: "Custom",
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const { insertedId } = await col.insertOne(doc);
+      return res
+        .status(201)
+        .json({ success: true, id: insertedId.toString(), plan: serialize({ _id: insertedId, ...doc }) });
+    }
+
+    if (req.method === "PUT") {
+      if (!idParam) {
+        return res.status(400).json({ error: "Missing plan id" });
+      }
+
+      const { name, description, ingredients, cost } = body;
+      if (!name || !Array.isArray(ingredients) || !ingredients.length) {
+        return res.status(400).json({ error: "Missing name or ingredients" });
+      }
+
+      const update = {
+        $set: {
+          name: String(name),
+          description: String(description || ""),
+          ingredients: ingredients.map(String),
+          cost: Number(cost) || 0,
+          updatedAt: new Date(),
+        },
+      };
+
+      const result = await col.updateOne(
+        { _id: new ObjectId(idParam), userId: user.id },
+        update
+      );
+
+      if (!result.matchedCount) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      return res.status(200).json({ success: true });
+    }
+
+    if (req.method === "DELETE") {
+      if (!idParam) {
+        return res.status(400).json({ error: "Missing plan id" });
+      }
+
+      const result = await col.deleteOne({
+        _id: new ObjectId(idParam),
+        userId: user.id,
+      });
+
+      if (!result.deletedCount) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      return res.status(200).json({ success: true });
+    }
   } catch (err) {
-    console.error("PUT mealplans error:", err);
-    res.status(500).json({ error: "Server error: " + err.message });
+    console.error("Mealplans API error:", err);
+    return res.status(500).json({ error: "Server error: " + err.message });
   }
-});
-
-// ---------- DELETE a plan ----------
-router.delete("/:id", async (req, res) => {
-  try {
-    const email = getUserEmailFromCookie(req);
-    if (!email) return res.status(401).json({ error: "Not authenticated" });
-
-    const db = await getDb();
-    const mealplans = db.collection("mealplans");
-    const { id } = req.params;
-
-    const result = await mealplans.deleteOne({
-      _id: new ObjectId(id),
-      userEmail: email,
-    });
-
-    if (result.deletedCount === 0)
-      return res.status(404).json({ error: "Meal plan not found or not yours" });
-
-    res.status(200).json({ success: true });
-  } catch (err) {
-    console.error("DELETE mealplans error:", err);
-    res.status(500).json({ error: "Server error: " + err.message });
-  }
-});
-
-module.exports = router;
+};

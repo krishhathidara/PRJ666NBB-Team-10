@@ -13,6 +13,7 @@ const session = require("express-session");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
+
 // Load env (prefer .env.local if present, then .env)
 require("dotenv").config({ path: path.join(process.cwd(), ".env.local") });
 require("dotenv").config();
@@ -117,6 +118,10 @@ const usersHandler = require("./api/users");
 
 const mealPlansHandler = require("./api/mealplans");
 
+app.post("/api/ai/mealplan", require("./api/ai/mealplan"));
+app.post("/api/ai/add-cheapest", require("./api/ai/add-cheapest"));
+// AI endpoints
+app.post("/api/ai/mealplan", require("./api/ai/mealplan"));
 // Temporary route to verify MongoDB connection
 app.use('/api/testdb', require('./api/testdb'));
 app.use('/api/users', require('./api/users'));

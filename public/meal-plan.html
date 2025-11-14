@@ -4,25 +4,25 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Meal Plans | Grocery Web</title>
+
   <link rel="stylesheet" href="/styles/base.css" />
-  <script src="/scripts/ambient.js" defer></script>
 
   <style>
     body {
+      margin: 0;
       background: radial-gradient(circle at top right, #0f1f4d, #0a1640 60%, #061030);
       color: #f3f4f6;
-      font-family: 'Inter', sans-serif;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       min-height: 100vh;
-      padding-bottom: 100px;
     }
 
     /* ---------- NAVBAR ---------- */
     header.nav.glossy-nav {
       background: rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(20px) saturate(1.6);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-      padding: 12px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+      padding: 10px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -57,165 +57,527 @@
       text-decoration: none;
       font-weight: 500;
       padding: 8px 12px;
-      border-radius: 8px;
-      transition: background 0.2s, color 0.2s;
+      border-radius: 999px;
+      transition: background 0.2s, color 0.2s, transform 0.15s;
+      font-size: 0.92rem;
     }
 
     .mainnav a:hover {
-      background: rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.12);
       color: #60a5fa;
+      transform: translateY(-1px);
     }
 
     .mainnav a.active {
-      background: rgba(59,130,246,0.25);
-      color: #60a5fa;
+      background: linear-gradient(120deg, rgba(59, 130, 246, 0.6), rgba(34, 197, 94, 0.6));
+      color: #ecfeff;
       font-weight: 600;
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+    }
+
+    .account {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
     }
 
     .account a {
-      color: #93c5fd;
       text-decoration: none;
-      margin-left: 10px;
     }
 
     .btn-outline {
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 8px 14px;
-      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      padding: 6px 12px;
+      border-radius: 999px;
+      color: #e5e7eb;
+      background: transparent;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .btn-outline:hover {
+      background: rgba(15, 118, 110, 0.2);
+      border-color: rgba(34, 197, 94, 0.7);
+      color: #bbf7d0;
     }
 
     .btn {
-      background: linear-gradient(135deg, #3b82f6, #22c55e);
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      background: linear-gradient(120deg, #2563eb, #22c55e);
       color: #fff;
-      padding: 8px 14px;
-      border-radius: 8px;
+      padding: 8px 16px;
       font-weight: 600;
       text-decoration: none;
+      font-size: 0.9rem;
+      box-shadow: 0 12px 30px rgba(15, 118, 110, 0.55);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    h1 {
-      text-align: center;
-      margin: 40px 0 10px;
-      font-size: 2rem;
-      color: #f9fafb;
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 40px rgba(15, 118, 110, 0.65);
+      opacity: 0.96;
     }
 
-    .plans-container {
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 8px 18px rgba(15, 118, 110, 0.55);
+    }
+
+    /* ---------- PAGE LAYOUT ---------- */
+    .mealplans-page {
+      max-width: 1220px;
+      margin: 32px auto 60px;
+      padding: 0 20px 40px;
+    }
+
+    .page-hero {
+      text-align: left;
+      margin-bottom: 28px;
+    }
+
+    .page-hero h1 {
+      font-size: 2.3rem;
+      margin: 0 0 6px;
+      letter-spacing: 0.03em;
+    }
+
+    .page-hero p {
+      margin: 0;
+      color: #9ca3af;
+      max-width: 640px;
+      font-size: 0.98rem;
+    }
+
+    /* ---------- AI LAYOUT ---------- */
+    .ai-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 900px) {
+      .ai-layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .ai-card {
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.18), transparent 55%),
+        rgba(15, 23, 42, 0.9);
+      border-radius: 24px;
+      padding: 22px 22px 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ai-card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at 10% 0%, rgba(56, 189, 248, 0.08), transparent 60%),
+        radial-gradient(circle at 90% 100%, rgba(34, 197, 94, 0.08), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .ai-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .ai-card h2 {
+      margin: 0 0 6px;
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ai-subtitle {
+      margin: 0 0 18px;
+      color: #9ca3af;
+      font-size: 0.9rem;
+      max-width: 360px;
+    }
+
+    .ai-card label {
+      display: block;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      margin-bottom: 14px;
+    }
+
+    .ai-card input[type="text"],
+    .ai-card input[type="number"] {
+      margin-top: 6px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+
+    .ai-card input::placeholder {
+      color: #6b7280;
+    }
+
+    .ai-card input:focus {
+      border-color: rgba(59, 130, 246, 0.8);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.6);
+      background: rgba(15, 23, 42, 0.98);
+    }
+
+    .ai-servings-row {
+      max-width: 120px;
+    }
+
+    .ai-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .ai-status {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #a5b4fc;
+      min-height: 1.1em;
+    }
+
+    /* ---------- AI RECIPES LIST ---------- */
+    .ai-recipes {
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 24px;
+      padding: 16px 16px 18px;
+      border: 1px solid rgba(30, 64, 175, 0.6);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
+      min-height: 220px;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 20px;
-      width: 90%;
-      max-width: 1100px;
-      margin: 0 auto;
+      gap: 16px;
+      align-content: flex-start;
+    }
+
+    .ai-recipe-card {
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.25), rgba(15, 23, 42, 0.95));
+      border-radius: 18px;
+      padding: 16px 16px 14px;
+      border: 1px solid rgba(129, 140, 248, 0.6);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.9);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ai-recipe-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .ai-recipe-header h3 {
+      margin: 0;
+      font-size: 1.02rem;
+    }
+
+    .ai-badge {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(55, 65, 81, 0.9);
+      border: 1px solid rgba(129, 140, 248, 0.85);
+      color: #e5e7eb;
+      white-space: nowrap;
+    }
+
+    .ai-recipe-desc {
+      margin: 0 0 4px;
+      font-size: 0.82rem;
+      color: #cbd5f5;
+      min-height: 32px;
+    }
+
+    .ai-ingredients {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 6px;
+      font-size: 0.82rem;
+      color: #e5e7eb;
+    }
+
+    .ai-ingredients li {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+
+    .ai-ingredients .dot {
+      margin-top: 5px;
+      height: 6px;
+      width: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      flex-shrink: 0;
+    }
+
+    .ai-more {
+      color: #a5b4fc;
+      font-style: italic;
+    }
+
+    .ai-recipe-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .ai-recipe-actions .btn-outline {
+      padding: 6px 12px;
+    }
+
+    .ai-recipe-actions .btn {
+      padding: 6px 14px;
+    }
+
+    /* ---------- USER PLANS ---------- */
+    .user-plans {
+      margin-top: 32px;
+    }
+
+    .user-plans-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .user-plans-header h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
     }
 
     .plan-card {
-      background: rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 20px;
-      text-align: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-      transition: transform .3s, background .3s;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 16px;
+      padding: 14px 14px 12px;
+      text-align: left;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.3);
     }
 
-    .plan-card:hover {
-      transform: translateY(-6px);
-      background: rgba(255,255,255,0.12);
-    }
-
-    .plan-card h3 { color: #fff; margin-bottom: 8px; }
-    .plan-card p { color: #a5b4fc; font-size: .9rem; }
-
-    button {
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .btn {
-      background: linear-gradient(90deg, #2563eb, #3b82f6, #22c55e);
-      color: white;
-      padding: 8px 14px;
-      font-weight: 600;
-      margin-top: 10px;
-      transition: .3s;
-    }
-    .btn:hover { opacity: .9; }
-
-    .new-plan-btn {
-      display: block;
-      margin: 30px auto;
-      background: linear-gradient(90deg, #22c55e, #16a34a);
-      padding: 10px 22px;
+    .plan-card h3 {
+      margin: 0 0 6px;
       font-size: 1rem;
     }
 
-    /* Modal */
-    .modal {
+    .plan-card p.muted {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #9ca3af;
+    }
+
+    .muted {
+      color: #9ca3af;
+      font-size: 0.86rem;
+    }
+
+    .form-section {
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(10px);
+      border-radius: 18px;
+      max-width: 520px;
+      margin-top: 18px;
+      padding: 18px 18px 16px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.75);
+    }
+
+    .form-section h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+    }
+
+    .form-section label {
+      display: block;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+      margin-bottom: 10px;
+    }
+
+    .form-section input[type="text"],
+    .form-section input[type="number"],
+    .form-section textarea {
+      margin-top: 6px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.96);
+      color: #e5e7eb;
+      font-size: 0.9rem;
+      outline: none;
+      resize: vertical;
+      min-height: 40px;
+    }
+
+    .form-section textarea {
+      min-height: 70px;
+    }
+
+    .form-section input:focus,
+    .form-section textarea:focus {
+      border-color: rgba(59, 130, 246, 0.8);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.6);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      justify-content: flex-end;
+    }
+
+    /* ---------- MODAL / OVERLAY ---------- */
+    .plan-overlay {
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      display: none;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.86);
+      backdrop-filter: blur(10px);
+      display: flex;
       align-items: center;
       justify-content: center;
       z-index: 999;
+      animation: overlayFadeIn 0.18s ease-out;
     }
 
-    .modal-content {
-      background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(10px);
-      padding: 25px;
-      border-radius: 14px;
-      width: 90%;
-      max-width: 400px;
-      text-align: left;
-      color: #f1f5f9;
+    .zoom-card {
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.26), rgba(15, 23, 42, 0.98));
+      border-radius: 22px;
+      padding: 20px 22px 18px;
+      max-width: 640px;
+      max-height: 80vh;
+      overflow: auto;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.9);
+      border: 1px solid rgba(129, 140, 248, 0.75);
+      color: #e5e7eb;
+      animation: zoomIn 0.18s ease-out;
     }
 
-    .modal-content ul { margin: 10px 0 20px; }
-    .modal-content li { margin-bottom: 5px; }
-
-    .close-btn {
-      background: #ef4444;
-      color: #fff;
-      padding: 6px 12px;
-      border-radius: 6px;
+    .zoom-card h2 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 1.25rem;
     }
 
-    /* Form */
-    .form-section {
-      background: rgba(255,255,255,0.06);
-      backdrop-filter: blur(8px);
-      border-radius: 14px;
-      max-width: 500px;
-      margin: 40px auto;
-      padding: 20px 25px;
+    .modal-subtitle {
+      margin: 0 0 12px;
+      font-size: 0.86rem;
+      color: #c7d2fe;
     }
 
-    .form-section input, .form-section textarea {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
-      border-radius: 6px;
-      border: none;
-      outline: none;
+    .zoom-card h4 {
+      margin: 10px 0 6px;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #a5b4fc;
     }
 
-    .footer {
-      text-align: center;
-      color: #9ca3af;
-      padding: 20px 0;
+    .modal-ingredients,
+    .modal-steps {
+      margin: 0 0 4px;
+      padding-left: 18px;
+      font-size: 0.86rem;
+    }
+
+    .modal-actions {
+      margin-top: 12px;
+      text-align: right;
+    }
+
+    .modal-actions #closeZoom {
+      border-radius: 999px;
+      border: 1px solid rgba(156, 163, 175, 0.7);
       background: transparent;
+      color: #e5e7eb;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 0.86rem;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .modal-actions #closeZoom:hover {
+      background: rgba(31, 41, 55, 0.9);
+      border-color: rgba(209, 213, 219, 0.9);
+    }
+
+    .fade-out {
+      animation: overlayFadeOut 0.18s ease-in forwards;
+    }
+
+    @keyframes overlayFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes overlayFadeOut {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+
+    @keyframes zoomIn {
+      from {
+        opacity: 0;
+        transform: scale(0.96) translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
     }
   </style>
 </head>
 
 <body>
-  <!-- ============ NAVBAR ============ -->
+  <!-- NAVBAR -->
   <header class="nav glossy-nav">
     <a class="brand" href="/">
-      <img src="/assets/logo.svg" alt="Logo">
+      <img src="/assets/logo.svg" alt="Logo" />
       <strong>Grocery Web</strong>
     </a>
 
@@ -239,30 +601,103 @@
     </div>
   </header>
 
-  <!-- ============ MAIN CONTENT ============ -->
-  <h1>🥗 Meal Plans</h1>
+  <main class="mealplans-page">
+    <section class="page-hero">
+      <h1>🍱 Meal Plans</h1>
+      <p>
+        Plan smarter dinners, faster. Use AI to generate recipes, save them as plans,
+        and drop all the ingredients straight into your cart.
+      </p>
+    </section>
 
-  <section class="plans-container" id="plansContainer"></section>
+    <!-- AI MEAL PLANNER -->
+    <section class="ai-layout">
+      <div class="ai-card">
+        <h2>✨ AI Meal Planner</h2>
+        <p class="ai-subtitle">
+          Tell us what you feel like eating and any allergies you have.
+          We’ll suggest a couple of recipes with full ingredient lists you
+          can save or send to your cart.
+        </p>
 
-  <button class="new-plan-btn" id="newPlanBtn">+ New Plan</button>
+        <label>
+          DISH OR CUISINE
+          <input id="ai-dish" type="text" placeholder="e.g. butter chicken, white sauce pasta" />
+        </label>
 
-  <section class="form-section" id="newPlanForm" style="display:none;">
-    <h3>Create Your Custom Plan</h3>
-    <input type="text" id="planName" placeholder="Plan Name" required />
-    <textarea id="planIngredients" placeholder="Ingredients (comma separated)" rows="4"></textarea>
-    <button class="btn" id="savePlanBtn">Save Plan</button>
-  </section>
+        <label>
+          ALLERGIES / INGREDIENTS TO AVOID
+          <input id="ai-allergies" type="text" placeholder="e.g. peanuts, gluten" />
+        </label>
 
-  <!-- Modal -->
-  <div class="modal" id="planModal">
-    <div class="modal-content">
-      <h3 id="modalTitle"></h3>
-      <ul id="modalIngredients"></ul>
-      <button class="close-btn" id="closeModal">Close</button>
-    </div>
-  </div>
+        <label class="ai-servings-row">
+          SERVINGS
+          <input id="ai-servings" type="number" min="1" max="8" value="2" />
+        </label>
 
-  <footer class="footer">© 2025 Grocery Web</footer>
-  <script src="/scripts/meal-plan.js"></script>
+        <div class="ai-actions">
+          <button id="ai-generate-btn" class="btn">
+            🤖 Generate recipes
+          </button>
+        </div>
+
+        <p id="ai-status" class="ai-status"></p>
+      </div>
+
+      <div id="ai-recipes" class="ai-recipes">
+        <!-- AI recipe cards injected here -->
+      </div>
+    </section>
+
+    <!-- SAVED PLANS -->
+    <section id="userPlansSection" class="user-plans">
+      <div class="user-plans-header">
+        <h2>Your meal plans</h2>
+        <button id="newPlanBtn" class="btn-outline">
+          + New custom plan
+        </button>
+      </div>
+
+      <div id="plansContainer" class="plans-grid">
+        <!-- Saved user plans injected here -->
+      </div>
+
+      <section id="newPlanForm" class="form-section" hidden>
+        <h3>Create your custom plan</h3>
+
+        <label>
+          Plan name
+          <input
+            type="text"
+            id="planName"
+            placeholder="High-protein lunches, Weeknight dinners..."
+          />
+        </label>
+
+        <label>
+          Ingredients (comma separated)
+          <textarea
+            id="planIngredients"
+            rows="3"
+            placeholder="chicken breast, broccoli, brown rice..."
+          ></textarea>
+        </label>
+
+        <label>
+          Servings
+          <input id="planServings" type="number" min="1" max="8" value="2" />
+        </label>
+
+        <div class="form-actions">
+          <button id="savePlanBtn" class="btn">Save plan</button>
+          <button id="cancelPlanBtn" type="button" class="btn-outline">Cancel</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/scripts/ambient.js" defer></script>
+  <script src="/scripts/meal-plan.js" defer></script>
 </body>
 </html>
+```
