@@ -1,27 +1,13 @@
 // api/orders/sessionId.js
-// Works both on local Express (server.local.js) and on Vercel serverless.
+// Works on Vercel by calling Stripe's REST API via fetch instead of using the Stripe SDK.
 
 /* eslint-disable no-console */
 const { getDb } = require("../_db.js");
 const { getUserFromReq } = require("../_auth.js");
 
-// --- Stripe setup ---
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
-let stripe = null;
 
-if (STRIPE_SECRET_KEY) {
-  try {
-    stripe = require("stripe")(STRIPE_SECRET_KEY);
-  } catch (e) {
-    console.error("[orders/sessionId] Failed to init Stripe SDK:", e.message);
-  }
-} else {
-  console.warn(
-    "[orders/sessionId] STRIPE_SECRET_KEY is NOT set. " +
-      "Will only be able to return orders already saved in Mongo."
-  );
-}
-
+// ---- main handler ----
 module.exports = async (req, res) => {
   // Only allow GET
   if (req.method && req.method !== "GET") {
@@ -61,41 +47,24 @@ module.exports = async (req, res) => {
       order = await orders.findOne({ stripeSessionId: sessionId });
     }
 
-    // 3) If still not found, try building it from Stripe Checkout session
+    // 3) If still not found, build it from Stripe Checkout session via REST API
     if (!order) {
-      if (!stripe) {
-        console.error(
-          "[orders/sessionId] No STRIPE_SECRET_KEY configured; cannot fetch session from Stripe."
+      if (!STRIPE_SECRET_KEY) {
+        console.warn(
+          "[orders/sessionId] STRIPE_SECRET_KEY is NOT set on this deployment"
         );
         return res.status(404).json({
           error:
-            "Order not found (Stripe not configured on this deployment)",
+            "Order not found (Stripe secret key missing on this deployment)",
         });
       }
 
-      let stripeSession;
-      try {
-        stripeSession = await stripe.checkout.sessions.retrieve(sessionId, {
-          expand: ["line_items.data.price.product"],
-        });
-      } catch (e) {
-        console.error(
-          "[orders/sessionId] Stripe session retrieve failed:",
-          e.message
-        );
-        return res.status(404).json({
-          error:
-            "Order not found (Stripe could not find this session id on the server)",
-        });
-      }
+      const stripeSession = await fetchStripeSession(sessionId);
 
       if (!stripeSession) {
-        console.log(
-          "[orders/sessionId] Stripe session not found for id:",
-          sessionId
-        );
         return res.status(404).json({
-          error: "Order not found (Stripe session missing)",
+          error:
+            "Order not found (Stripe session missing or invalid for this key)",
         });
       }
 
@@ -196,6 +165,43 @@ module.exports = async (req, res) => {
 };
 
 // ---- helpers ----
+
+// Pull the Stripe Checkout Session using raw HTTPS + fetch
+async function fetchStripeSession(sessionId) {
+  try {
+    const url =
+      "https://api.stripe.com/v1/checkout/sessions/" +
+      encodeURIComponent(sessionId) +
+      "?expand[]=line_items.data.price.product&expand[]=line_items";
+
+    const resp = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      },
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error(
+        "[orders/sessionId] Stripe session retrieve failed:",
+        resp.status,
+        text.slice(0, 200)
+      );
+      return null;
+    }
+
+    const data = await resp.json();
+    return data;
+  } catch (e) {
+    console.error(
+      "[orders/sessionId] Error while calling Stripe REST API:",
+      e && e.message ? e.message : e
+    );
+    return null;
+  }
+}
+
 function getSessionIdFromRequest(req) {
   try {
     const q = req.query || {};
