@@ -173,7 +173,7 @@ if (deleteBtn) {
 
     try {
       const res = await fetch(`/api/receipts/delete?id=${id}`, {
-        method: "DELETE"
+        method: "POST"
       });
 
       const data = await res.json();

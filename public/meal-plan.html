@@ -17,119 +17,94 @@
     }
 
     /* ---------- NAVBAR ---------- */
-    header.nav.glossy-nav {
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(20px) saturate(1.6);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
-      padding: 10px 24px;
+    .top-nav {
+      width: 100%;
+      padding: 14px 26px;
+      background: linear-gradient(to right, #0f1f4d, #2563eb 60%, #22c55e);
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
-      z-index: 100;
+      z-index: 200;
+      box-shadow: 0 4px 22px rgba(0,0,0,0.4);
     }
 
-    .nav .brand {
+    .brand {
+      color: white;
+      text-decoration: none;
       display: flex;
       align-items: center;
       gap: 10px;
-      text-decoration: none;
-      color: #f9fafb;
-      font-weight: 700;
       font-size: 1.1rem;
+      font-weight: 700;
     }
 
-    .nav .brand img {
-      height: 28px;
-      width: auto;
+    .tag {
+      background: #16a34a;
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: white;
+      font-size: 0.78rem;
     }
 
-    .mainnav {
+    .nav-links {
       display: flex;
-      gap: 16px;
       align-items: center;
+      gap: 18px;
     }
 
-    .mainnav a {
-      color: #cbd5e1;
+    .nav-links a {
       text-decoration: none;
+      color: #e0e7ff;
       font-weight: 500;
-      padding: 8px 12px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      transition: 0.2s;
+    }
+
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+
+    .nav-links a.active {
+      color: #fff;
+      background: rgba(255,255,255,0.22);
+      font-weight: 700;
+    }
+
+    .location-box {
+      background: rgba(255,255,255,0.25);
+      padding: 8px 14px;
       border-radius: 999px;
-      transition: background 0.2s, color 0.2s, transform 0.15s;
-      font-size: 0.92rem;
-    }
-
-    .mainnav a:hover {
-      background: rgba(255, 255, 255, 0.12);
-      color: #60a5fa;
-      transform: translateY(-1px);
-    }
-
-    .mainnav a.active {
-      background: linear-gradient(120deg, rgba(59, 130, 246, 0.6), rgba(34, 197, 94, 0.6));
-      color: #ecfeff;
-      font-weight: 600;
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
-    }
-
-    .account {
       display: flex;
       align-items: center;
       gap: 8px;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.4);
       font-size: 0.9rem;
     }
 
-    .account a {
-      text-decoration: none;
+    .location-box .dot {
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
     }
 
-    .btn-outline {
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      padding: 6px 12px;
-      border-radius: 999px;
-      color: #e5e7eb;
-      background: transparent;
+    #account-info {
+      display: flex;
+      gap: 16px;
+      color: white;
       font-weight: 500;
       cursor: pointer;
-      transition: background 0.2s, color 0.2s, border-color 0.2s;
     }
 
-    .btn-outline:hover {
-      background: rgba(15, 118, 110, 0.2);
-      border-color: rgba(34, 197, 94, 0.7);
-      color: #bbf7d0;
+    #account-info span:hover {
+      opacity: 0.7;
     }
 
-    .btn {
-      border: none;
-      border-radius: 999px;
-      cursor: pointer;
-      background: linear-gradient(120deg, #2563eb, #22c55e);
-      color: #fff;
-      padding: 8px 16px;
-      font-weight: 600;
-      text-decoration: none;
-      font-size: 0.9rem;
-      box-shadow: 0 12px 30px rgba(15, 118, 110, 0.55);
-      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 16px 40px rgba(15, 118, 110, 0.65);
-      opacity: 0.96;
-    }
-
-    .btn:active {
-      transform: translateY(0);
-      box-shadow: 0 8px 18px rgba(15, 118, 110, 0.55);
-    }
 
     /* ---------- PAGE LAYOUT ---------- */
     .mealplans-page {
@@ -575,13 +550,13 @@
 
 <body>
   <!-- NAVBAR -->
-  <header class="nav glossy-nav">
-    <a class="brand" href="/">
-      <img src="/assets/logo.svg" alt="Logo" />
+  <header class="top-nav">
+    <a href="/" class="brand">
+      <span class="tag">Grocery Web</span>
       <strong>Grocery Web</strong>
     </a>
 
-    <nav class="mainnav">
+    <nav class="nav-links">
       <a href="/">Home</a>
       <a href="/nearby.html">Nearby Stores</a>
       <a href="/cart.html">Shopping Cart</a>
@@ -589,17 +564,14 @@
       <a href="/profile.html">Profile</a>
     </nav>
 
-    <div class="account">
-      <span id="account-guest">
-        <a class="btn-outline" href="/auth/signin.html">Sign In</a>
-        <a class="btn" href="/auth/signup.html">Sign Up</a>
-      </span>
-      <span id="account-user" style="display:none">
-        <a href="/profile.html">Profile</a>
-        <a id="logout-link" href="#">Logout</a>
-      </span>
+  
+
+    <div id="account-info">
+      <span id="navProfile">Profile</span>
+      <span id="navLogout">Logout</span>
     </div>
   </header>
+
 
   <main class="mealplans-page">
     <section class="page-hero">
@@ -652,11 +624,14 @@
     <!-- SAVED PLANS -->
     <section id="userPlansSection" class="user-plans">
       <div class="user-plans-header">
-        <h2>Your meal plans</h2>
-        <button id="newPlanBtn" class="btn-outline">
-          + New custom plan
-        </button>
-      </div>
+  <h2>Your meal plans</h2>
+
+  <div style="display:flex; gap:10px;">
+    <button id="editPlansBtn" class="btn-outline edit-btn">Edit</button>
+    <button id="newPlanBtn" class="btn-outline">+ New custom plan</button>
+  </div>
+</div>
+
 
       <div id="plansContainer" class="plans-grid">
         <!-- Saved user plans injected here -->
@@ -696,6 +671,7 @@
     </section>
   </main>
 
+  
   <script src="/scripts/ambient.js" defer></script>
   <script src="/scripts/meal-plan.js" defer></script>
 </body>

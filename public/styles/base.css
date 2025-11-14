@@ -1089,3 +1089,33 @@ button.remove:hover {
     border-color: #cbd5e1 !important;
 }
 
+/* EDIT MODE */
+.edit-btn.active {
+  background: rgba(220, 38, 38, 0.35);
+  border-color: rgba(248, 113, 113, 0.8);
+  color: #fecaca;
+}
+
+.plan-card {
+  position: relative;
+}
+
+.delete-plan-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 50%;
+  font-size: 0.78rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+
+.delete-plan-btn.show {
+  display: block;
+}

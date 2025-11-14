@@ -25,7 +25,7 @@
   let editingPlanId = null;
   let lastAiRecipes = [];
 
-  /* ---------- SMALL TOAST HELPER ---------- */
+  /* ---------- TOAST ---------- */
   function showToast(message, type = "info") {
     let toast = document.getElementById("toast");
     if (!toast) {
@@ -64,7 +64,7 @@
     }, 3500);
   }
 
-  /* ---------- AUTH / ACCOUNT UI ---------- */
+  /* ---------- AUTH ---------- */
   async function fetchCurrentUser() {
     try {
       const res = await fetch("/api/auth/me", { credentials: "include" });
@@ -97,88 +97,226 @@
     });
   }
 
-  /* ---------- UTIL HELPERS ---------- */
+  /* ---------- INGREDIENT FIXER ---------- */
 
+  /**
+   * Normalize ANY ingredient object/string into:
+   * "80 g spaghetti"
+   * "1 tbsp olive oil"
+   * "cashews"
+   */
   function formatIngredient(ing) {
     if (!ing) return "";
-    if (typeof ing === "string") return ing;
 
-    const name = ing.name || ing.ingredient || "";
-    if (!name) return "";
-
-    let quantity = ing.quantity;
-    let unit = ing.unit || "";
-
-    // Only use quantity if it’s actually numeric
-    const num = parseFloat(quantity);
-    const hasNumericQty = Number.isFinite(num) && num > 0;
-
-    if (!hasNumericQty) {
-      // drop weird “g paneer” cases and just show the name
-      return name.trim();
+    // If already a clean string
+    if (typeof ing === "string") {
+      return ing.trim();
     }
 
-    const qtyPart = num % 1 === 0 ? num.toString() : num.toFixed(1);
-    return [qtyPart, unit, name].filter(Boolean).join(" ").trim();
+    // Accept multiple AI formats
+    let name =
+      ing.name ||
+      ing.ingredient ||
+      ing.item ||
+      ing.product ||
+      ing.title ||
+      "";
+
+    name = String(name).replace(/[^A-Za-z0-9\s-]/g, "").trim();
+
+    let qty =
+      ing.quantity ||
+      ing.qty ||
+      ing.amount ||
+      ing.value ||
+      null;
+
+    let unit =
+      ing.unit ||
+      ing.units ||
+      "";
+
+    // Convert weird strings "6.98 [EEE 22"
+    if (qty && typeof qty === "string") {
+      qty = qty.replace(/[^0-9.]/g, "");
+    }
+
+    const num = parseFloat(qty);
+
+    if (!name) return ""; // skip broken objects
+
+    // If no usable qty → just return name
+    if (!Number.isFinite(num) || num <= 0) {
+      return name;
+    }
+
+    return `${num}${unit ? " " + unit : ""} ${name}`.trim();
   }
 
   function normalizeIngredientsForAPI(list) {
     if (!Array.isArray(list)) return [];
     return list
-      .map((ing) => {
-        if (!ing) return null;
-        if (typeof ing === "string") return ing;
-        // Just send the human readable string, server will clean
-        return formatIngredient(ing);
-      })
-      .filter(Boolean);
+      .map((ing) => formatIngredient(ing))
+      .filter((x) => x && x.length > 0);
   }
 
-  function shortDescription(text, max = 120) {
-    if (!text) return "";
-    if (text.length <= max) return text;
-    return text.slice(0, max - 3) + "...";
+  function shortDescription(t, max = 120) {
+    if (!t) return "";
+    return t.length <= max ? t : t.slice(0, max - 3) + "...";
   }
 
-  /* ---------- PLAN MODAL ---------- */
+  function normalizeIngredientForDisplay(ing) {
+  if (!ing) return "";
 
-  function openPlanModal(plan) {
-    document.querySelector(".plan-overlay")?.remove();
+  // If it's already a string
+  if (typeof ing === "string") return ing;
 
-    const overlay = document.createElement("div");
-    overlay.className = "plan-overlay";
+  // AI sometimes sends weird keys:
+  const name =
+    ing.name ||
+    ing.ingredient ||
+    ing.item ||
+    "" + ing; // last resort
 
-    const card = document.createElement("div");
-    card.className = "zoom-card";
+  if (!name) return "";
 
-    const servingsText =
-      typeof plan.servings === "number" && plan.servings > 0
-        ? `Serves ${plan.servings}`
-        : "";
+  // FIX quantity:
+  let qty = ing.quantity || ing.qty || ing.amount || null;
 
-    const ingredients = Array.isArray(plan.ingredients) ? plan.ingredients : [];
-    const steps = Array.isArray(plan.steps) ? plan.steps : [];
+  // Convert "80 g" → qty=80, unit="g"
+  if (typeof qty === "string" && qty.includes(" ")) {
+    const parts = qty.split(" ");
+    const num = parseFloat(parts[0]);
+    if (!isNaN(num)) {
+      qty = num;
+      ing.unit = parts[1]; // attach detected unit
+    }
+  }
 
-    const ingredientsHtml = ingredients
-      .map((ing) => `<li>${formatIngredient(ing)}</li>`)
-      .join("");
+  // final numeric check
+  qty = parseFloat(qty);
+  if (!Number.isFinite(qty) || qty <= 0) qty = null;
 
-    const stepsHtml = steps
-      .map((s) => `<li>${s}</li>`)
-      .join("");
+  // FIX unit:
+  const unit =
+    ing.unit ||
+    ing.measure ||
+    ing.uom ||
+    null;
 
-    card.innerHTML = `
-      <h2>${plan.name || "Meal plan"}</h2>
+  // BUILD TEXT
+  if (qty && unit) return `${qty} ${unit} ${name}`;
+  if (qty) return `${qty} ${name}`;
+  return name;
+}
+
+
+  /* ---------- VIEW RECIPE MODAL ---------- */
+ function openPlanModal(plan) {
+  document.querySelector(".plan-overlay")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.className = "plan-overlay";
+
+  const card = document.createElement("div");
+  card.className = "zoom-card";
+
+  const servingsText =
+    typeof plan.servings === "number" && plan.servings > 0
+      ? `Serves ${plan.servings}`
+      : "";
+
+  console.log("RAW INGREDIENTS:", plan.ingredients);
+
+  // --------------------------
+  // 🔥 FIX INGREDIENT PARSING
+  // --------------------------
+  const rawIngredients = Array.isArray(plan.ingredients)
+    ? plan.ingredients
+    : [];
+
+  // FIX for "[object Object]" and other broken string cases
+  function normalizeIngredient(item) {
+    if (!item) return null;
+
+    // CASE 1: Already an object
+    if (typeof item === "object") return item;
+
+    // CASE 2: Some AI returns JSON but as STRING
+    if (typeof item === "string") {
+      // Remove whitespace
+      const trimmed = item.trim();
+
+      // Try to parse JSON strings
+      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+        try {
+          return JSON.parse(trimmed);
+        } catch (_) {}
+      }
+
+      // If it is "[object Object]" -> unusable
+      if (trimmed === "[object Object]") {
+        return null;
+      }
+
+      // ELSE: Treat it as a plain name
+      return { name: trimmed, quantity: null, unit: "" };
+    }
+
+    return null;
+  }
+
+  // Turn into clean objects
+  const cleanedIngredients = rawIngredients
+    .map(normalizeIngredient)
+    .filter(Boolean);
+
+  // --------------------------
+  // 🔥 FORMAT FOR DISPLAY
+  // --------------------------
+  function formatIngredientDisplay(ing) {
+    if (!ing) return "";
+
+    const name = ing.name || ing.ingredient || "";
+    const qty = ing.quantity;
+    const unit = ing.unit || "";
+
+    if (!name) return "";
+
+    // If quantity missing → just show name
+    if (!qty || isNaN(qty)) return name;
+
+    const q = Number(qty);
+    const qtyText = q % 1 === 0 ? q.toString() : q.toFixed(1);
+
+    return `${qtyText} ${unit} ${name}`.trim();
+  }
+
+  const ingredientsForDisplay = cleanedIngredients.map(formatIngredientDisplay);
+
+  // Steps
+  const steps = Array.isArray(plan.steps) ? plan.steps : [];
+
+  const ingredientsHtml = ingredientsForDisplay
+    .map((i) => `<li>${i}</li>`)
+    .join("");
+
+  const stepsHtml = steps.map((s) => `<li>${s}</li>`).join("");
+
+  // Build modal
+  card.innerHTML = `
+      <h2>${plan.title || plan.name}</h2>
       <p class="modal-subtitle">
-        ${servingsText || ""}${
-      servingsText && plan.description ? " • " : ""
-    }${plan.description || ""}
+        ${servingsText}
+        ${servingsText && plan.description ? " • " : ""}
+        ${plan.description || ""}
       </p>
 
       ${
-        ingredients.length
-          ? `<h4>Ingredients</h4><ul class="modal-ingredients">${ingredientsHtml}</ul>`
-          : `<p class="muted">No ingredients stored for this plan.</p>`
+        ingredientsForDisplay.length
+          ? `<h4>Ingredients</h4>
+             <ul class="modal-ingredients">${ingredientsHtml}</ul>`
+          : `<p class="muted">No ingredients available.</p>`
       }
 
       ${
@@ -189,30 +327,33 @@
 
       <div class="modal-actions">
         ${
-          ingredients.length
-            ? `<button id="modalAddToCart" class="btn" style="margin-right:8px;">Add ingredients to cart</button>`
+          cleanedIngredients.length
+            ? `<button id="modalAddToCart" class="btn" style="margin-right:8px;">
+                Add ingredients to cart
+               </button>`
             : ""
         }
         <button id="closeZoom">Close</button>
       </div>
     `;
 
-    overlay.appendChild(card);
-    document.body.appendChild(overlay);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
 
-    document.getElementById("closeZoom").onclick = () => {
-      overlay.classList.add("fade-out");
-      setTimeout(() => overlay.remove(), 200);
-    };
+  document.getElementById("closeZoom").onclick = () => {
+    overlay.classList.add("fade-out");
+    setTimeout(() => overlay.remove(), 200);
+  };
 
-    const addBtn = document.getElementById("modalAddToCart");
-    if (addBtn && ingredients.length) {
-      addBtn.onclick = () => addIngredientsToCart(ingredients);
-    }
+  // Send CLEANED OBJECTS, not displayed strings
+  if (cleanedIngredients.length) {
+    document.getElementById("modalAddToCart").onclick = () =>
+      addIngredientsToCart(cleanedIngredients);
   }
+}
 
-  /* ---------- CART: ADD CHEAPEST ITEMS ---------- */
 
+  /* ---------- ADD TO CART ---------- */
   async function addIngredientsToCart(ingredients) {
     const normalized = normalizeIngredientsForAPI(ingredients);
     if (!normalized.length) {
@@ -228,42 +369,33 @@
         body: JSON.stringify({ ingredients: normalized }),
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const text = await res.text();
-        console.error("add-cheapest error:", text);
-        showToast("Unable to add items to cart.", "error");
+        showToast("Could not add ingredients.", "error");
         return;
       }
 
-      const data = await res.json();
-      const addedCount = (data.added || []).length;
+      const added = data.added || [];
       const missing = data.missing || [];
-
-      if (addedCount === 0 && !missing.length) {
-        showToast("No matching products found for any ingredient.", "error");
-        return;
-      }
 
       if (missing.length) {
         showToast(
-          `Added ${addedCount} item(s). Could not find: ${missing.join(", ")}.`,
+          `Added ${added.length}. Missing: ${missing.join(", ")}`,
           "info"
         );
       } else {
-        showToast(`Added ${addedCount} ingredient(s) to your cart.`, "info");
+        showToast(`Added ${added.length} ingredient(s).`, "info");
       }
     } catch (err) {
-      console.error("add-cheapest error:", err);
-      showToast("Something went wrong adding to cart.", "error");
+      showToast("Something went wrong.", "error");
     }
   }
 
-  /* ---------- USER PLANS: LOAD & RENDER ---------- */
-
+  /* ---------- LOAD SAVED PLANS ---------- */
   async function loadUserPlans() {
     try {
       const res = await fetch("/api/mealplans", { credentials: "include" });
-      if (!res.ok) return [];
       const data = await res.json().catch(() => []);
       return Array.isArray(data) ? data : [];
     } catch (err) {
@@ -274,9 +406,10 @@
 
   function renderPlans(plans) {
     plansContainer.innerHTML = "";
+
     if (!plans.length) {
       plansContainer.innerHTML =
-        '<p class="muted">No saved meal plans yet. Use the AI planner above or create your own.</p>';
+        '<p class="muted">No saved meal plans yet.</p>';
       return;
     }
 
@@ -284,31 +417,26 @@
       const card = document.createElement("article");
       card.className = "plan-card";
 
-      const desc =
-        p.description ||
-        "Custom meal plan created by you. Tap to see all ingredients.";
-
-      const servingsText =
-        typeof p.servings === "number" && p.servings > 0
-          ? `Servings: ${p.servings}`
-          : "";
-
       card.innerHTML = `
-        <h3>${p.name || "Meal plan"}</h3>
-        <p class="muted">${shortDescription(desc, 140)}</p>
-        ${
-          servingsText
-            ? `<p class="muted" style="margin-top:4px;">${servingsText}</p>`
-            : ""
-        }
-      `;
+  <button class="delete-plan-btn" data-id="${p._id}">✕</button>
+  <h3>${p.name}</h3>
+  <p class="muted">${shortDescription(
+    p.description || "Custom plan created by you."
+  )}</p>
+  ${
+    p.servings
+      ? `<p class="muted" style="margin-top:4px;">Servings: ${p.servings}</p>`
+      : ""
+  }
+`;
+
 
       card.addEventListener("click", () => openPlanModal(p));
       plansContainer.appendChild(card);
     }
   }
 
-  /* ---------- MANUAL CUSTOM PLAN ---------- */
+  /* ---------- SAVE CUSTOM PLAN ---------- */
 
   function showPlanForm(editing = false) {
     newPlanForm.hidden = false;
@@ -336,10 +464,11 @@
       .split(",")
       .map((x) => x.trim())
       .filter(Boolean);
+
     const servings = parseInt(planServingsInput.value, 10) || 2;
 
     if (!name || !ingredientsRaw.length) {
-      showToast("Please enter a name and at least one ingredient.", "error");
+      showToast("Enter name + ingredients.", "error");
       return;
     }
 
@@ -351,136 +480,168 @@
       fromAi: false,
     };
 
-    const method = editingPlanId ? "PUT" : "POST";
     const url = editingPlanId
-      ? `/api/mealplans/${encodeURIComponent(editingPlanId)}`
+      ? `/api/mealplans/${editingPlanId}`
       : "/api/mealplans";
 
     try {
       const res = await fetch(url, {
-        method,
+        method: editingPlanId ? "PUT" : "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok || !data.success) {
-        console.error("save plan error:", data);
-        showToast("Could not save meal plan.", "error");
+        showToast("Could not save.", "error");
         return;
       }
+
       showToast("Meal plan saved.", "info");
       hidePlanForm();
+
       const plans = await loadUserPlans();
       renderPlans(plans);
     } catch (err) {
-      console.error("savePlan error:", err);
-      showToast("Could not save meal plan.", "error");
+      showToast("Error saving.", "error");
     }
   });
 
-  /* ---------- AI MEAL PLANNER ---------- */
+  /* ---------- AI PLANNER ---------- */
+function renderAiRecipes(recipes) {
+  aiRecipesContainer.innerHTML = "";
 
-  function renderAiRecipes(recipes) {
-    aiRecipesContainer.innerHTML = "";
-    if (!recipes || !recipes.length) {
-      aiRecipesContainer.innerHTML =
-        '<p class="muted">No recipes yet. Describe a dish and hit “Generate recipes”.</p>';
-      return;
-    }
-
-    lastAiRecipes = recipes;
-
-    for (let i = 0; i < recipes.length; i++) {
-      const r = recipes[i];
-      const card = document.createElement("article");
-      card.className = "ai-recipe-card";
-
-      const serves =
-        typeof r.servings === "number" && r.servings > 0 ? r.servings : null;
-      const servesLabel = serves ? `Serves ${serves}` : "";
-
-      const ing = Array.isArray(r.ingredients) ? r.ingredients : [];
-      const previewCount = Math.min(4, ing.length);
-      const preview = ing.slice(0, previewCount);
-      const moreCount = Math.max(0, ing.length - previewCount);
-
-      const ingredientsHtml = preview
-        .map(
-          (item) =>
-            `<li><span class="dot"></span><span>${formatIngredient(
-              item
-            )}</span></li>`
-        )
-        .join("");
-
-      card.innerHTML = `
-        <div class="ai-recipe-header">
-          <h3>${r.title || `Recipe ${i + 1}`}</h3>
-          ${
-            servesLabel
-              ? `<span class="ai-badge">${servesLabel}</span>`
-              : `<span class="ai-badge">AI recipe</span>`
-          }
-        </div>
-        <p class="ai-recipe-desc">${shortDescription(r.description || "", 160)}</p>
-        <ul class="ai-ingredients">
-          ${ingredientsHtml}
-          ${
-            moreCount > 0
-              ? `<li class="ai-more">…and ${moreCount} more</li>`
-              : ""
-          }
-        </ul>
-        <div class="ai-recipe-actions">
-          <button class="btn-outline ai-view">View</button>
-          <button class="btn-outline ai-add-cart">Add to cart</button>
-          <button class="btn ai-use">Use this recipe</button>
-        </div>
-      `;
-
-      card.querySelector(".ai-view").onclick = () => openPlanModal(r);
-      card.querySelector(".ai-add-cart").onclick = () =>
-        addIngredientsToCart(r.ingredients || []);
-      card.querySelector(".ai-use").onclick = () => saveAiPlan(r);
-
-      aiRecipesContainer.appendChild(card);
-    }
+  if (!recipes.length) {
+    aiRecipesContainer.innerHTML =
+      '<p class="muted">No recipes yet.</p>';
+    return;
   }
 
+  lastAiRecipes = recipes;
+
+  for (let i = 0; i < recipes.length; i++) {
+    const r = recipes[i];
+
+    const card = document.createElement("article");
+    card.className = "ai-recipe-card";
+
+    const serves =
+      typeof r.servings === "number" && r.servings > 0
+        ? r.servings
+        : null;
+
+    // ❗ DO NOT use formatIngredient() → we NEVER touch the original object
+    const previewObjects = Array.isArray(r.ingredients)
+      ? r.ingredients
+      : [];
+
+    // PURE display formatter (no mutation)
+    const preview = previewObjects.map((ing) => {
+      const name =
+        ing.name ||
+        ing.ingredient ||
+        ing.item ||
+        "";
+
+      const qty = parseFloat(ing.quantity);
+      const unit = ing.unit || "";
+
+      if (!name) return "";
+
+      if (!Number.isFinite(qty)) return name;
+
+      const qtyStr = qty % 1 === 0 ? qty : qty.toFixed(1);
+
+      return `${qtyStr} ${unit} ${name}`.trim();
+    }).filter(Boolean);
+
+    const previewHtml = preview
+      .slice(0, 4)
+      .map(
+        (txt) =>
+          `<li><span class="dot"></span><span>${txt}</span></li>`
+      )
+      .join("");
+
+    const moreCount = Math.max(0, preview.length - 4);
+
+    card.innerHTML = `
+      <div class="ai-recipe-header">
+        <h3>${r.title || "AI Recipe"}</h3>
+        <span class="ai-badge">${
+          serves ? `Serves ${serves}` : "AI recipe"
+        }</span>
+      </div>
+
+      <p class="ai-recipe-desc">${shortDescription(
+        r.description || "",
+        160
+      )}</p>
+
+      <ul class="ai-ingredients">
+        ${previewHtml}
+        ${
+          moreCount > 0
+            ? `<li class="ai-more">…and ${moreCount} more</li>`
+            : ""
+        }
+      </ul>
+
+      <div class="ai-recipe-actions">
+        <button class="btn-outline ai-view">View</button>
+        <button class="btn-outline ai-add-cart">Add to cart</button>
+        <button class="btn ai-use">Use this recipe</button>
+      </div>
+    `;
+
+    // ✔ SAFE: send ORIGINAL OBJECTS to modal
+    card.querySelector(".ai-view").onclick = () =>
+      openPlanModal({
+        name: r.title,
+        description: r.description,
+        ingredients: r.ingredients, // original untouched
+        servings: r.servings,
+        steps: r.steps,
+      });
+
+    // ✔ Add raw objects to cart
+    card.querySelector(".ai-add-cart").onclick = () =>
+      addIngredientsToCart(r.ingredients || []);
+
+    // ✔ Save plan cleanly
+    card.querySelector(".ai-use").onclick = () =>
+      saveAiPlan({
+        name: r.title,
+        description: r.description,
+        ingredients: r.ingredients,
+        servings: r.servings,
+        steps: r.steps,
+      });
+
+    aiRecipesContainer.appendChild(card);
+  }
+}
+
+
   async function saveAiPlan(recipe) {
-    if (!recipe) return;
-
-    const body = {
-      name: recipe.title || "AI meal plan",
-      description: recipe.description || "",
-      ingredients: recipe.ingredients || [],
-      servings: recipe.servings || null,
-      fromAi: true,
-      steps: recipe.steps || [],
-    };
-
     try {
       const res = await fetch("/api/mealplans", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(recipe),
       });
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.success) {
-        console.error("save AI plan error:", data);
-        showToast("Could not save this recipe as a meal plan.", "error");
-        return;
-      }
-      showToast("Recipe saved to your meal plans.", "info");
+      const data = await res.json();
+      if (!data.success) throw new Error();
+
+      showToast("Recipe saved!", "info");
       const plans = await loadUserPlans();
       renderPlans(plans);
     } catch (err) {
-      console.error("saveAiPlan error:", err);
-      showToast("Could not save this recipe as a meal plan.", "error");
+      showToast("Could not save AI recipe.", "error");
     }
   }
 
@@ -490,7 +651,7 @@
     const servings = parseInt(aiServingsInput.value, 10) || 2;
 
     if (!dish) {
-      showToast("Please describe a dish or cuisine first.", "error");
+      showToast("Enter a dish name.", "error");
       return;
     }
 
@@ -506,32 +667,19 @@
       });
 
       const text = await res.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (err) {
-        console.error("Bad AI response:", text);
-        aiStatus.textContent =
-          "Something went wrong generating recipes. Please try again.";
-        aiGenerateBtn.disabled = false;
+      const data = JSON.parse(text);
+
+      if (!data.recipes?.length) {
+        aiStatus.textContent = "No recipes found.";
         return;
       }
 
-      if (!res.ok || !data.recipes || !data.recipes.length) {
-        console.error("AI error:", data);
-        aiStatus.textContent =
-          data.error ||
-          "Could not generate recipes right now. Please try again later.";
-        aiGenerateBtn.disabled = false;
-        return;
-      }
+      aiStatus.textContent = `Showing ${data.recipes.length} ideas`;
+      console.log("🔥 FULL AI RAW RECIPES:", data.recipes);
 
-      aiStatus.textContent = `Showing ${data.recipes.length} recipe idea(s).`;
       renderAiRecipes(data.recipes);
     } catch (err) {
-      console.error("AI generate error:", err);
-      aiStatus.textContent =
-        "Something went wrong generating recipes. Please try again.";
+      aiStatus.textContent = "Error generating recipes.";
     } finally {
       aiGenerateBtn.disabled = false;
     }
@@ -542,14 +690,58 @@
     handleGenerate();
   });
 
-  /* ---------- INIT ---------- */
+  /* ---------- EDIT / DELETE MODE ---------- */
+let editMode = false;
 
-  const user = await fetchCurrentUser();
-  if (!user) {
-    // still show the page, but they’ll be redirected from other actions
-    console.log("Not signed in.");
+const editBtn = document.getElementById("editPlansBtn");
+
+if (editBtn) {
+  editBtn.addEventListener("click", () => {
+    editMode = !editMode;
+
+    editBtn.classList.toggle("edit-btn-active", editMode);
+    editBtn.textContent = editMode ? "Done" : "Edit";
+
+    // Show or hide delete buttons
+    document.querySelectorAll(".delete-plan-btn").forEach((btn) => {
+      btn.classList.toggle("show", editMode);
+    });
+  });
+}
+
+// DELETE HANDLER
+document.addEventListener("click", async (e) => {
+  if (!e.target.classList.contains("delete-plan-btn")) return;
+
+  e.stopPropagation(); // prevent opening modal
+
+  const id = e.target.dataset.id;
+  if (!id) return;
+
+  const confirmDelete = confirm("Delete this meal plan?");
+  if (!confirmDelete) return;
+
+  try {
+    const res = await fetch(`/api/mealplans/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      showToast("Failed to delete.", "error");
+      return;
+    }
+
+    // Remove card from UI
+    e.target.closest(".plan-card").remove();
+    showToast("Deleted!", "info");
+  } catch (err) {
+    showToast("Error deleting.", "error");
   }
+});
 
+  /* ---------- INIT ---------- */
+  await fetchCurrentUser();
   const plans = await loadUserPlans();
   renderPlans(plans);
 })();

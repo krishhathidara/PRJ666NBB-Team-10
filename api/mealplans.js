@@ -1,6 +1,4 @@
 // /api/mealplans.js
-// CRUD for user meal plans. Works in Vercel serverless + local dev (server.local.js).
-
 const { ObjectId } = require("mongodb");
 const { getDb } = require("./_db");
 const { getUserFromReq } = require("./_auth");
@@ -9,13 +7,6 @@ function getIdFromReq(req) {
   try {
     const url = (req.url || "").split("?")[0];
     const parts = url.split("/").filter(Boolean);
-
-    // Express mounted as app.use("/api/mealplans", handler):
-    //   "/"       -> []
-    //   "/123"    -> ["123"]
-    // Vercel direct:
-    //   "/api/mealplans"      -> ["api","mealplans"]
-    //   "/api/mealplans/123"  -> ["api","mealplans","123"]
     if (!parts.length) return null;
     const last = parts[parts.length - 1];
     if (last === "mealplans") return null;
@@ -79,23 +70,25 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(plans.map(serialize));
     }
 
-    // Parse body (both serverless + express.json)
+    // Parse body
     const body =
       req.body && typeof req.body === "object" ? req.body : {};
 
     if (req.method === "POST") {
       const { name, description, ingredients, cost } = body;
+
       if (!name || !Array.isArray(ingredients) || !ingredients.length) {
         return res.status(400).json({ error: "Missing name or ingredients" });
       }
 
       const now = new Date();
+
       const doc = {
         userId: user.id,
         userEmail: user.email,
         name: String(name),
         description: String(description || ""),
-        ingredients: ingredients.map(String),
+        ingredients: ingredients,   // ← FIXED (no map(String))
         cost: Number(cost) || 0,
         type: "Custom",
         createdAt: now,
@@ -105,7 +98,11 @@ module.exports = async function handler(req, res) {
       const { insertedId } = await col.insertOne(doc);
       return res
         .status(201)
-        .json({ success: true, id: insertedId.toString(), plan: serialize({ _id: insertedId, ...doc }) });
+        .json({
+          success: true,
+          id: insertedId.toString(),
+          plan: serialize({ _id: insertedId, ...doc })
+        });
     }
 
     if (req.method === "PUT") {
@@ -114,6 +111,7 @@ module.exports = async function handler(req, res) {
       }
 
       const { name, description, ingredients, cost } = body;
+
       if (!name || !Array.isArray(ingredients) || !ingredients.length) {
         return res.status(400).json({ error: "Missing name or ingredients" });
       }
@@ -122,7 +120,7 @@ module.exports = async function handler(req, res) {
         $set: {
           name: String(name),
           description: String(description || ""),
-          ingredients: ingredients.map(String),
+          ingredients: ingredients,   // ← FIXED (no map(String))
           cost: Number(cost) || 0,
           updatedAt: new Date(),
         },

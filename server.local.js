@@ -126,8 +126,15 @@ app.post("/api/ai/mealplan", require("./api/ai/mealplan"));
 app.use('/api/testdb', require('./api/testdb'));
 app.use('/api/users', require('./api/users'));
 app.use("/api/mealplans", mealPlansHandler);
+app.use("/api/receipts", require("./api/receipts"));
 
-
+// --- RECEIPTS API ---
+app.use("/api/receipts/create", require("./api/receipts/create"));
+app.use("/api/receipts/list", require("./api/receipts/list"));
+app.use("/api/receipts/mostBought", require("./api/receipts/mostBought"));
+app.use("/api/receipts/summary", require("./api/receipts/summary"));
+app.use("/api/receipts/details", require("./api/receipts/details"));
+app.delete("/api/receipts/delete", require("./api/receipts/delete"));
 
 // --- ENV ---
 const MONGODB_URI = process.env.MONGODB_URI;
