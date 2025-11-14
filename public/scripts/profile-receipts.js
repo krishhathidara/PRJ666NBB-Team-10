@@ -5,22 +5,21 @@ document.addEventListener("DOMContentLoaded", () => {
   loadProfileReceipts();
 });
 
-// Load the user's latest receipts
+/* ============================================================
+    LOAD USER RECEIPTS
+============================================================ */
 async function loadProfileReceipts() {
   const container = document.getElementById("profile-receipts");
   container.innerHTML = "<p style='color:#94a3b8'>Loading receipts...</p>";
 
   const session = await fetch("/api/auth/me").then(r => r.json());
 
-  // If user is not logged in
   if (!session || session.error || !session.email) {
     container.innerHTML = "<p style='color:#94a3b8'>Please sign in to see receipts.</p>";
     return;
   }
 
-  // User ID from JWT session
   const userId = session.id;
-
   const res = await fetch(`/api/receipts/list?userId=${userId}`);
   const data = await res.json();
 
@@ -30,7 +29,6 @@ async function loadProfileReceipts() {
   }
 
   container.innerHTML = "";
-
   const recent = data.receipts.slice(0, 4);
 
   recent.forEach(r => {
@@ -39,28 +37,50 @@ async function loadProfileReceipts() {
     card.style.cursor = "pointer";
 
     card.innerHTML = `
-      <h3 style="margin:0">${r.storeName || 'Receipt'}</h3>
+      <h3 style="margin:0">${r.storeName || "Receipt"}</h3>
       <p style="color:#94a3b8; margin:4px 0">${new Date(r.createdAt).toLocaleDateString()}</p>
       <p style="font-size:1.2rem; font-weight:700; color:#22c55e">$${r.total.toFixed(2)}</p>
     `;
 
     card.onclick = () => window.location.href = `/receipts.html?open=${r._id}`;
-
     container.appendChild(card);
   });
 }
 
-// Upload receipt from profile page
+/* ============================================================
+    OCR USING CDN (WORKS ON VERCEL)
+============================================================ */
+async function runOCR(imageBlob) {
+  // Load Tesseract worker from CDN — no wasm files needed
+  const worker = await Tesseract.createWorker({
+    workerPath: "https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/worker.min.js",
+    corePath: "https://cdn.jsdelivr.net/npm/tesseract.js-core@4/tesseract-core.wasm",
+    langPath: "https://tessdata.projectnaptha.com/4.0.0/",
+  });
+
+  await worker.load();
+  await worker.loadLanguage("eng");
+  await worker.initialize("eng");
+
+  const { data } = await worker.recognize(imageBlob);
+
+  await worker.terminate();
+  return data.text;
+}
+
+/* ============================================================
+    UPLOAD RECEIPT
+============================================================ */
 async function uploadReceiptProfile(e) {
   const file = e.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
+
   reader.onload = async () => {
     const base64 = reader.result;
 
     const session = await fetch("/api/auth/me").then(r => r.json());
-
     if (!session || session.error || !session.email) {
       alert("Please sign in first.");
       return;
@@ -68,6 +88,7 @@ async function uploadReceiptProfile(e) {
 
     const userId = session.id;
 
+    // Send to API to save + run OCR
     const res = await fetch("/api/receipts/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
