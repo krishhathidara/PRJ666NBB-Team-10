@@ -1,9 +1,26 @@
 // api/orders/sessionId.js
+// Works both on local Express (server.local.js) and on Vercel serverless.
+
+/* eslint-disable no-console */
 const { getDb } = require("../_db.js");
 const { getUserFromReq } = require("../_auth.js");
 
+// --- Stripe setup ---
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
-const stripe = STRIPE_SECRET_KEY ? require("stripe")(STRIPE_SECRET_KEY) : null;
+let stripe = null;
+
+if (STRIPE_SECRET_KEY) {
+  try {
+    stripe = require("stripe")(STRIPE_SECRET_KEY);
+  } catch (e) {
+    console.error("[orders/sessionId] Failed to init Stripe SDK:", e.message);
+  }
+} else {
+  console.warn(
+    "[orders/sessionId] STRIPE_SECRET_KEY is NOT set. " +
+      "Will only be able to return orders already saved in Mongo."
+  );
+}
 
 module.exports = async (req, res) => {
   // Only allow GET
@@ -23,13 +40,15 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "Missing sessionId" });
     }
 
+    console.log("[orders/sessionId] Looking up order for session:", sessionId);
+
     const db = await getDb();
     const orders = db.collection("orders");
     const user = getUserFromReq(req);
 
     let order = null;
 
-    // 1) Try existing order docs first
+    // 1) Try existing order docs first (user-specific)
     if (user && user.id) {
       order = await orders.findOne({
         stripeSessionId: sessionId,
@@ -37,17 +56,21 @@ module.exports = async (req, res) => {
       });
     }
 
+    // 2) Try any order with this sessionId
     if (!order) {
       order = await orders.findOne({ stripeSessionId: sessionId });
     }
 
-    // 2) If not found in DB, try to build it from Stripe checkout session
+    // 3) If still not found, try building it from Stripe Checkout session
     if (!order) {
       if (!stripe) {
         console.error(
-          "No STRIPE_SECRET_KEY configured; cannot fetch session from Stripe"
+          "[orders/sessionId] No STRIPE_SECRET_KEY configured; cannot fetch session from Stripe."
         );
-        return res.status(404).json({ error: "Order not found" });
+        return res.status(404).json({
+          error:
+            "Order not found (Stripe not configured on this deployment)",
+        });
       }
 
       let stripeSession;
@@ -56,13 +79,24 @@ module.exports = async (req, res) => {
           expand: ["line_items.data.price.product"],
         });
       } catch (e) {
-        console.error("Stripe session retrieve failed:", e.message);
-        return res.status(404).json({ error: "Order not found" });
+        console.error(
+          "[orders/sessionId] Stripe session retrieve failed:",
+          e.message
+        );
+        return res.status(404).json({
+          error:
+            "Order not found (Stripe could not find this session id on the server)",
+        });
       }
 
       if (!stripeSession) {
-        console.log("Stripe session not found:", sessionId);
-        return res.status(404).json({ error: "Order not found" });
+        console.log(
+          "[orders/sessionId] Stripe session not found for id:",
+          sessionId
+        );
+        return res.status(404).json({
+          error: "Order not found (Stripe session missing)",
+        });
       }
 
       const lineItems =
@@ -87,18 +121,24 @@ module.exports = async (req, res) => {
           price: unitPrice,
           store: (li.metadata && li.metadata.store) || "Grocery Web",
           storeLocation:
-            (li.metadata && li.metadata.storeLocation) || "Pickup at store",
+            (li.metadata && li.metadata.storeLocation) ||
+            "Pickup at store",
           deliveryMethod:
-            (li.metadata && li.metadata.deliveryMethod) || "Pickup at store",
+            (li.metadata && li.metadata.deliveryMethod) ||
+            "Pickup at store",
         };
       });
 
-      const createdAt = new Date((stripeSession.created || Date.now() / 1000) * 1000);
+      const createdAt = new Date(
+        (stripeSession.created || Date.now() / 1000) * 1000
+      );
       const total =
         typeof stripeSession.amount_total === "number"
           ? stripeSession.amount_total / 100
           : items.reduce(
-              (sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
+              (sum, it) =>
+                sum +
+                (Number(it.price) || 0) * (Number(it.quantity) || 1),
               0
             );
 
@@ -125,14 +165,27 @@ module.exports = async (req, res) => {
       // Save it so next time we hit DB directly
       try {
         const insertResult = await orders.insertOne(order);
-        order._id = insertResult.insertedId.toString();
+        order._id = String(insertResult.insertedId);
+        console.log(
+          "[orders/sessionId] Saved Stripe-derived order with _id:",
+          order._id
+        );
       } catch (e) {
-        console.error("Failed to insert Stripe-derived order:", e);
+        console.error(
+          "[orders/sessionId] Failed to insert Stripe-derived order:",
+          e
+        );
       }
     }
 
-    if (order._id) {
+    if (order && order._id) {
       order._id = String(order._id);
+    }
+
+    if (!order) {
+      return res.status(404).json({
+        error: "Order not found (no DB record and no Stripe session)",
+      });
     }
 
     return res.status(200).json(order);
