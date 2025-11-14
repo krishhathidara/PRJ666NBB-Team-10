@@ -1,11 +1,23 @@
 // api/orders/sessionId.js
-// Works on Vercel by calling Stripe's REST API via fetch instead of using the Stripe SDK.
+// Works on Vercel by calling Stripe's REST API via fetch.
+// Falls back to a hard-coded TEST secret key so env glitches don't break receipts.
 
 /* eslint-disable no-console */
 const { getDb } = require("../_db.js");
 const { getUserFromReq } = require("../_auth.js");
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
+// ---- STRIPE SECRET KEY ----
+// 1) Try environment variable (correct way)
+// 2) Fallback to your TEST secret key so Vercel receipts still work
+const STRIPE_SECRET_KEY =
+  process.env.STRIPE_SECRET_KEY ||
+  "sk_test_51SIyaMRt1KViteu9SbINBmMjVuCw4YhvRZ52bIlIYmE7xQPZzvdXzjm4paMQXea5ytryTWxcOtVaaYFsVpQsr5Fm00TqxQPQsY";
+
+if (!STRIPE_SECRET_KEY) {
+  console.warn(
+    "[orders/sessionId] No Stripe secret key at all (env or fallback). Receipts cannot be built."
+  );
+}
 
 // ---- main handler ----
 module.exports = async (req, res) => {
@@ -50,12 +62,9 @@ module.exports = async (req, res) => {
     // 3) If still not found, build it from Stripe Checkout session via REST API
     if (!order) {
       if (!STRIPE_SECRET_KEY) {
-        console.warn(
-          "[orders/sessionId] STRIPE_SECRET_KEY is NOT set on this deployment"
-        );
         return res.status(404).json({
           error:
-            "Order not found (Stripe secret key missing on this deployment)",
+            "Order not found (Stripe key missing entirely – check code/env).",
         });
       }
 
@@ -166,7 +175,7 @@ module.exports = async (req, res) => {
 
 // ---- helpers ----
 
-// Pull the Stripe Checkout Session using raw HTTPS + fetch
+// Call Stripe Checkout Session REST API using fetch
 async function fetchStripeSession(sessionId) {
   try {
     const url =
