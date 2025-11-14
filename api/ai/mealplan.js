@@ -1,172 +1,222 @@
-// /api/ai/mealplan.js
-// Uses Groq to generate 1–2 recipe options for a given dish + allergies.
+// api/ai/mealplan.js
+//
+// AI-powered meal plan generator using Groq.
+// Works both on Vercel (serverless) and with server.local.js (Express).
 
-const { getUserFromReq } = require("../_auth");
+const MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+// Use Node's global fetch when available, otherwise fall back to node-fetch
+let doFetch = global.fetch;
+if (!doFetch) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  doFetch = (...args) =>
+    import("node-fetch").then(({ default: fetch }) => fetch(...args));
+}
 
-// Simple heuristic defaults when Groq gives a unit but no quantity
-function normalizeQuantity(rawQuantity, unit) {
-  if (typeof rawQuantity === "number" && Number.isFinite(rawQuantity)) {
-    return rawQuantity;
+/**
+ * Call Groq and get raw assistant content.
+ */
+async function callGroq(dish, allergies, servings) {
+  const systemPrompt = `
+You are a professional recipe developer. 
+Return ONLY strict JSON. Do not include backticks or any extra text.
+
+JSON SCHEMA (exact shape):
+
+{
+  "recipes": [
+    {
+      "title": "string",
+      "servings": number,
+      "description": "string",
+      "ingredients": [
+        {
+          "name": "string",
+          "quantity": number,
+          "unit": "string"
+        }
+      ],
+      "steps": ["string", "..."]
+    }
+  ]
+}
+
+RULES:
+- Use realistic quantities, always numeric for "quantity" (e.g. 250, 1.5, 0.25).
+- "unit" must be something like "g", "ml", "tbsp", "tsp", "cup", "piece", etc.
+- Scale quantities to match the requested servings exactly.
+- Respect allergy / avoidance list (do NOT use those ingredients).
+- Return 1–2 recipe options.
+`;
+
+  const userPrompt = `
+Dish or cuisine: ${dish || "any"}
+Servings: ${servings || 2}
+Allergies / avoid: ${allergies || "none"}
+`;
+
+  const body = {
+    model: MODEL,
+    messages: [
+      { role: "system", content: systemPrompt.trim() },
+      { role: "user", content: userPrompt.trim() },
+    ],
+    max_tokens: 900,
+    temperature: 0.7,
+  };
+
+  const resp = await doFetch(
+    "https://api.groq.com/openai/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify(body),
+    }
+  );
+
+  const text = await resp.text();
+
+  if (!resp.ok) {
+    // Surface Groq error text up to 400 chars
+    throw new Error(`Groq HTTP ${resp.status}: ${text.slice(0, 400)}`);
   }
-  if (!unit) return null;
 
-  const u = String(unit).toLowerCase().trim();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch (err) {
+    throw new Error(`Groq top-level JSON parse failed: ${err.message}`);
+  }
 
-  if (u === "g" || u === "gram" || u === "grams") return 200;      // 200 g
-  if (u === "kg" || u === "kilogram" || u === "kilograms") return 0.5; // 0.5 kg
-  if (u === "ml") return 100;                                       // 100 ml
-  if (u.includes("cup")) return 1;                                  // 1 cup
-  if (u.includes("tbsp")) return 1;                                 // 1 tbsp
-  if (u.includes("tsp")) return 0.5;                                // 0.5 tsp
-  if (u.includes("clove")) return 2;                                // 2 cloves
-  if (u.includes("piece") || u.includes("pc")) return 1;            // 1 piece
+  const content =
+    json.choices?.[0]?.message?.content?.trim() ||
+    (() => {
+      throw new Error("Groq response missing message content");
+    })();
 
-  // Fallback: at least 1 of whatever the unit is
-  return 1;
+  // Extract JSON from content (in case the model wraps it in text)
+  const start = content.indexOf("{");
+  const end = content.lastIndexOf("}");
+  if (start === -1 || end === -1) {
+    throw new Error(
+      "Groq content was not pure JSON. Got: " + content.slice(0, 200)
+    );
+  }
+
+  const inner = content.slice(start, end + 1);
+
+  let parsed;
+  try {
+    parsed = JSON.parse(inner);
+  } catch (err) {
+    throw new Error(
+      `Groq inner JSON parse failed: ${err.message} in: ${inner.slice(
+        0,
+        200
+      )}`
+    );
+  }
+
+  return parsed;
+}
+
+/**
+ * Normalize recipes: ensure numeric servings, clean ingredient fields, etc.
+ */
+function normalizeRecipes(parsed, requestedServings) {
+  let recipes = parsed?.recipes;
+  if (!Array.isArray(recipes)) {
+    // Sometimes model might just return an array
+    if (Array.isArray(parsed)) recipes = parsed;
+    else recipes = [];
+  }
+
+  const targetServings = Number(requestedServings) || 2;
+
+  return recipes.map((r, idx) => {
+    const servings = Number(r.servings) || targetServings;
+
+    const ingredients = Array.isArray(r.ingredients)
+      ? r.ingredients
+          .map((ing) => {
+            const name = (ing.name || ing.ingredient || "").toString().trim();
+            if (!name) return null;
+
+            let qty = Number(ing.quantity);
+            if (!Number.isFinite(qty)) qty = 1;
+
+            const unit = (ing.unit || ing.measure || "").toString().trim();
+
+            return { name, quantity: qty, unit };
+          })
+          .filter(Boolean)
+      : [];
+
+    return {
+      id: idx,
+      title: r.title || `Recipe ${idx + 1}`,
+      servings,
+      description: r.description || "",
+      ingredients,
+      steps: Array.isArray(r.steps) ? r.steps.map(String) : [],
+    };
+  });
 }
 
 module.exports = async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const user = getUserFromReq(req);
-  if (!user || !user.email) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  if (!GROQ_API_KEY) {
-    console.error("GROQ_API_KEY missing on this deployment");
-    return res.status(500).json({ error: "AI not configured on server" });
-  }
-
   try {
-    const { dish, allergies = [], servings } = req.body || {};
-
-    if (!dish || typeof dish !== "string") {
-      return res.status(400).json({ error: "Missing or invalid 'dish' field" });
+    if (req.method && req.method !== "POST") {
+      if (res.setHeader) res.setHeader("Allow", "POST");
+      return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const requestedServings = Math.max(
-      1,
-      Math.min(12, parseInt(servings, 10) || 2)
-    );
+    if (!GROQ_API_KEY) {
+      console.error("❌ GROQ_API_KEY missing in environment");
+      return res.status(500).json({
+        error:
+          "AI is not configured on this deployment (GROQ_API_KEY is missing).",
+      });
+    }
 
-    const allergyText =
-      Array.isArray(allergies) && allergies.length
-        ? allergies.join(", ")
-        : "none";
-
-    // ===== Call Groq =====
-    const groqRes = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          temperature: 0.4,
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a helpful recipe generator for a grocery web app.\n" +
-                "ALWAYS respond with STRICT JSON only, no extra text.\n" +
-                'Format:\n{"recipes":[{\n' +
-                '  "title":string,\n' +
-                '  "description":string,\n' +
-                '  "time_minutes":number,\n' +
-                '  "servings":number,\n' +
-                '  "ingredients":[{"name":string,"quantity":number|null,"unit":string|null,"notes":string|null}],\n' +
-                '  "steps":[string]\n' +
-                "}]}",
-            },
-            {
-              role: "user",
-              content:
-                `Create 1 or 2 recipe options for: "${dish}". ` +
-                `Avoid these allergens or ingredients: ${allergyText}. ` +
-                `Each recipe MUST serve exactly ${requestedServings} people.\n\n` +
-                "For every ingredient where a realistic numeric amount is possible, " +
-                'you MUST provide a non-null "quantity" (number) AND "unit" (e.g. g, ml, cup, tbsp).\n' +
-                "Examples of valid ingredients:\n" +
-                '{"name":"paneer","quantity":200,"unit":"g","notes":null}\n' +
-                '{"name":"butter","quantity":2,"unit":"tbsp","notes":null}\n' +
-                '{"name":"salt","quantity":null,"unit":null,"notes":"to taste"}\n' +
-                'Only use null for quantity when it truly has no fixed amount like "salt to taste".\n' +
-                "Use common grocery ingredients available in Canada. Keep the recipe suitable for home cooking.",
-            },
-          ],
-        }),
+    // Body may be already parsed (Express) or a string (Vercel)
+    let body = req.body;
+    if (typeof body === "string") {
+      try {
+        body = JSON.parse(body || "{}");
+      } catch {
+        body = {};
       }
-    );
+    }
+    body = body || {};
 
-    if (!groqRes.ok) {
-      const text = await groqRes.text();
-      console.error("Groq API error:", groqRes.status, text.slice(0, 200));
-      return res
-        .status(502)
-        .json({ error: "AI service returned an error", details: text });
+    const dish = (body.dish || "").trim();
+    const allergies = (body.allergies || "").trim();
+    const servings = Number(body.servings) || 2;
+
+    if (!dish) {
+      return res.status(400).json({ error: "Dish / cuisine is required." });
     }
 
-    const data = await groqRes.json();
-    const content =
-      data.choices?.[0]?.message?.content?.trim() || '{"recipes":[]}';
+    const raw = await callGroq(dish, allergies, servings);
+    const recipes = normalizeRecipes(raw, servings);
 
-    let parsed;
-    try {
-      parsed = JSON.parse(content);
-    } catch (e) {
-      console.error("Failed to parse Groq JSON content:", content);
-      return res
-        .status(502)
-        .json({ error: "AI response was not valid JSON", raw: content });
-    }
-
-    if (!parsed || !Array.isArray(parsed.recipes)) {
-      return res
-        .status(502)
-        .json({ error: "AI response missing recipes array", raw: parsed });
-    }
-
-    // ===== Sanitize & normalize =====
-    const recipes = parsed.recipes.slice(0, 2).map((r, idx) => {
-      const safeIngredients = Array.isArray(r.ingredients)
-        ? r.ingredients.map((ing) => {
-            const name = String(ing.name || "").trim();
-            const unit = ing.unit ? String(ing.unit).trim() : null;
-            let quantity = normalizeQuantity(ing.quantity, unit);
-            const notes = ing.notes ? String(ing.notes).trim() : null;
-
-            return { name, quantity, unit, notes };
-          })
-        : [];
-
-      const steps = Array.isArray(r.steps)
-        ? r.steps.map((s) => String(s).trim())
-        : [];
-
-      return {
-        id: idx,
-        title: String(r.title || `Recipe ${idx + 1}`),
-        description: String(r.description || ""),
-        time_minutes: Number(r.time_minutes || 0),
-        // Force servings to whatever the user picked
-        servings: requestedServings,
-        ingredients: safeIngredients,
-        steps,
-      };
+    return res.status(200).json({
+      recipes,
+      source: "groq",
+      model: MODEL,
     });
-
-    return res.status(200).json({ recipes });
   } catch (err) {
     console.error("AI mealplan handler error:", err);
-    return res.status(500).json({ error: "Server error: " + err.message });
+    const msg = err && err.message ? err.message : String(err);
+
+    // ALWAYS return JSON so front-end's res.json() never breaks
+    return res.status(500).json({
+      error: "AI service failed",
+      details: msg.slice(0, 400),
+    });
   }
 };
