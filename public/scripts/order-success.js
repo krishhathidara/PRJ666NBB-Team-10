@@ -47,7 +47,7 @@ async function initReceiptPage() {
   try {
     if (statusLabel) statusLabel.textContent = "Loading receipt…";
 
-    // *** IMPORTANT: use the query-based endpoint that exists on Vercel ***
+    // IMPORTANT: correct path is /api/orders/sessionId (with 'orders', not 'ordens')
     const apiUrl = `/api/orders/sessionId?sessionId=${encodeURIComponent(
       sessionId
     )}`;
