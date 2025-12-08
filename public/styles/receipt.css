@@ -1,0 +1,367 @@
+/* receipt.css – layout + styling for success / receipt page */
+
+/* ===== Layout shell ===== */
+
+.success-container {
+  max-width: 1120px;
+  margin: 40px auto 80px;
+}
+
+.success-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.success-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.success-title h1 {
+  font-size: 1.6rem;
+  margin: 0 0 4px;
+}
+
+.check-pill {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: radial-gradient(circle at 30% 0%, #22c55e, #16a34a);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
+  color: #f9fafb;
+}
+
+.success-actions {
+  margin-left: auto;
+  text-align: right;
+}
+
+.summary-line {
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.btn-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Make buttons pill-shaped */
+.pill {
+  border-radius: 999px !important;
+  padding-inline: 18px !important;
+  min-height: 38px;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pill-primary {
+  /* tweaked version of your green theme – blue accent to match nav */
+  background: linear-gradient(120deg, #2563eb, #22c55e);
+  border: none;
+}
+
+/* ===== Receipt card ===== */
+
+.receipt-card {
+  margin-top: 16px;
+  padding: 24px 28px 22px;
+  border-radius: 24px;
+  background: radial-gradient(circle at 0% 0%, #0f172a, #020617);
+  box-shadow:
+    0 18px 35px rgba(15, 23, 42, 0.85),
+    0 0 0 1px rgba(148, 163, 184, 0.15);
+}
+
+.receipt-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.25);
+  font-size: 0.8rem;
+}
+
+.brand-badge span {
+  font-weight: 600;
+}
+
+.brand-mark {
+  width: 22px;
+  height: 22px;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand-name {
+  font-weight: 600;
+}
+
+.brand-tagline {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.receipt-title {
+  text-align: right;
+}
+
+.receipt-title .title-main {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* ===== Meta info ===== */
+
+.receipt-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px 32px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: linear-gradient(to right, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.7));
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.meta-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meta-column-right {
+  text-align: right;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.88rem;
+}
+
+.meta-column-right .meta-row {
+  justify-content: flex-end;
+}
+
+.meta-label {
+  color: #9ca3af;
+}
+
+.meta-value {
+  font-weight: 500;
+}
+
+/* ===== Error bar ===== */
+
+.receipt-error {
+  margin: 14px 2px 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.7);
+  background: rgba(127, 29, 29, 0.7);
+  color: #fee2e2;
+  font-size: 0.86rem;
+}
+
+/* ===== Store sections ===== */
+
+.receipt-stores {
+  margin-top: 16px;
+}
+
+.receipt-store {
+  margin-top: 14px;
+  padding: 14px 18px 14px;
+  border-radius: 18px;
+  background: radial-gradient(circle at 0% 0%, #020617, #020617);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.65);
+}
+
+.receipt-store:first-of-type {
+  margin-top: 18px;
+}
+
+.receipt-store-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.store-name {
+  font-weight: 600;
+}
+
+.store-meta {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  margin-top: 3px;
+}
+
+.store-subtotal-label {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.store-subtotal-amount {
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+/* ===== Table ===== */
+
+.receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.receipt-table thead {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+}
+
+.receipt-table th,
+.receipt-table td {
+  padding: 6px 4px;
+}
+
+.receipt-table th.col-name,
+.receipt-table td.col-name {
+  text-align: left;
+}
+
+.receipt-table th.col-unit,
+.receipt-table th.col-qty,
+.receipt-table th.col-line,
+.receipt-table td.col-unit,
+.receipt-table td.col-qty,
+.receipt-table td.col-line {
+  text-align: right;
+}
+
+.receipt-table tbody tr {
+  border-top: 1px solid rgba(15, 23, 42, 0.9);
+}
+
+.receipt-table tbody tr:first-child {
+  border-top: 1px solid rgba(30, 64, 175, 0.6);
+}
+
+/* ===== Footer total ===== */
+
+.receipt-footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.4);
+}
+
+.grand-total-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.grand-total-label span:last-child {
+  font-size: 1.15rem;
+}
+
+/* ===== Back to home pill link ===== */
+
+.back-row {
+  margin-top: 26px;
+  text-align: center;
+}
+
+.btn-link-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #e5e7eb;
+  text-decoration: none;
+  font-size: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.btn-link-pill:hover {
+  background: rgba(30, 64, 175, 0.9);
+}
+
+/* ===== Print styles ===== */
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  .nav,
+  .footer,
+  .success-header,
+  .back-row {
+    display: none !important;
+  }
+
+  .success-container {
+    max-width: none;
+    margin: 0;
+  }
+
+  .receipt-card {
+    box-shadow: none;
+    border-radius: 0;
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .receipt-store {
+    box-shadow: none;
+    background: #ffffff;
+  }
+
+  .btn,
+  .btn-outline {
+    display: none !important;
+  }
+}

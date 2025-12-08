@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Store Products | Grocery Web</title>
+  <link rel="stylesheet" href="/styles/base.css" />
+  <style>
+    /* ====== PAGE BACKGROUND (blue gradient like home) ====== */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 65% 35%, #1e3a8a 0%, #1e40af 35%, #0f172a 100%);
+      background-attachment: fixed;
+      font-family: "Poppins", system-ui, sans-serif;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    /* ====== CONTAINER ====== */
+    .page-wrapper {
+      max-width: 900px;
+      margin: 100px auto 80px;
+      padding: 20px;
+      position: relative;
+    }
+
+    /* ====== BACK BUTTON ====== */
+    .back-btn {
+      position: fixed;
+      top: 24px;
+      left: 24px;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 18px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      font-weight: 600;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    /* ====== HEADER ====== */
+    h1 {
+      text-align: center;
+      color: #f8fafc;
+      font-weight: 700;
+      font-size: 1.8rem;
+      margin-bottom: 36px;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* ====== PRODUCT CARD ====== */
+    .product-card {
+      background: rgba(255, 255, 255, 0.95);
+      color: #0f172a;
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .product-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .product-card h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .meta {
+      color: #6b7280;
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+
+    .price {
+      font-weight: 700;
+      color: #111827;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+
+    .stock {
+      margin-top: 8px;
+      color: #16a34a;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stock::before {
+      content: "✔";
+      color: #16a34a;
+      font-weight: bold;
+    }
+
+    .error {
+      text-align: center;
+      color: #f87171;
+      margin-top: 24px;
+      font-weight: 500;
+    }
+
+    /* ====== LIGHT GLOW EFFECT ====== */
+    .glow {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 40% 20%, rgba(56, 189, 248, 0.12), transparent 60%),
+                  radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.12), transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ====== ADD TO CART BUTTON ====== */
+    .add-to-cart-btn {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 10px 18px;
+      background: linear-gradient(135deg, #2563eb, #1e3a8a);
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+    }
+
+    .add-to-cart-btn:hover {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    }
+
+    .add-to-cart-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 3px 10px rgba(37, 99, 235, 0.4);
+    }
+
+    .add-to-cart-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* ====== Messages ====== */
+    .message {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 500;
+      z-index: 1000;
+      transition: opacity 0.5s ease;
+    }
+    .message.success {
+      background: #34d399;
+    }
+    .message.error {
+      background: #f87171;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+
+  <a href="/nearby.html" class="back-btn">← Back to Nearby Stores</a>
+
+  <div class="page-wrapper">
+    <h1 id="store-name">Store Products</h1>
+    <div id="product-list"></div>
+    <p id="error-msg" class="error" style="display:none;"></p>
+  </div>
+
+  <script>
+    async function loadProducts() {
+      const params = new URLSearchParams(window.location.search);
+      const storeId = params.get("storeID");
+      const storeName = decodeURIComponent(params.get("storeName") || "Store");
+      document.getElementById("store-name").textContent = storeName + " Products";
+
+      try {
+        const res = await fetch(`/api/stores/${storeId}/products`);
+        if (!res.ok) throw new Error("Server error: " + res.status);
+        const data = await res.json();
+
+        const list = document.getElementById("product-list");
+        list.innerHTML = "";
+
+        data.products.forEach(p => {
+          const el = document.createElement("div");
+          el.className = "product-card";
+          el.innerHTML = `
+            <h2>${p.name}</h2>
+            <div class="meta">${p.category} • ${p.unit}</div>
+            <div class="price">$${p.price.toFixed(2)} ${p.currency}</div>
+            ${p.inStock ? `<div class="stock">In Stock</div>` : `<div style="color:#dc2626;">Out of Stock</div>`}
+            <button class="add-to-cart-btn" 
+            data-product-id="${p._id}" 
+            data-name="${p.name}" 
+            data-store="${storeName}" 
+            data-price="${p.price}" ${p.inStock ? '' 
+            : 'disabled'}>Add to Cart</button>
+          `;
+          list.appendChild(el);
+        });
+      } catch (err) {
+        console.error("Failed to load products:", err);
+        const errorEl = document.getElementById("error-msg");
+        errorEl.style.display = "block";
+        errorEl.textContent = "❌ Failed to load products: " + err.message;
+      }
+    }
+
+    function showMessage(text, type) {
+      console.log(`Showing message: ${text} (${type})`);
+      const msg = document.createElement("div");
+      msg.className = `message ${type}`;
+      msg.textContent = text;
+      document.body.appendChild(msg);
+      setTimeout(() => {
+        msg.style.opacity = 0;
+        setTimeout(() => msg.remove(), 500);
+      }, 3000);
+    }
+    
+    document.addEventListener('click', async (e) => {
+      if (e.target.classList.contains('add-to-cart-btn') && !e.target.disabled) {
+        console.log('Add to cart button clicked:', e.target.dataset);
+        const { productId, name, store, price } = e.target.dataset;
+        try {
+          const response = await fetch('/api/cart/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', // Send cookies for auth
+            body: JSON.stringify({ productId, name, store, price: parseFloat(price), quantity: 1 })
+          });
+          console.log('Add to cart response status:', response.status);
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Failed to add to cart: ${response.status}`);
+          }
+          const cartItems = await response.json();
+          console.log('Cart updated:', cartItems);
+          showMessage('Added to cart!', 'success');
+        } catch (err) {
+          console.error('Add to cart error:', err);
+          showMessage('Error adding to cart: ' + err.message, 'error');
+        }
+      }
+    });
+
+
+    loadProducts();
+  </script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grocery Web — Products</title>
+
+  <!-- global styles and scripts -->
+  <link rel="stylesheet" href="/styles/base.css" />
+  <link rel="stylesheet" href="/styles/product.css" />
+
+  <script src="/scripts/ambient.js" defer></script>
+  <script src="/scripts/session.js" defer></script>
+  <script src="/scripts/location.js" defer></script>
+  <script src="/scripts/products.js" defer></script>
+</head>
+
+<body id="product-page">
+  <!-- NAVBAR (identical to Home) -->
+  <header class="nav glossy-nav">
+    <a class="brand" href="/">
+      <img src="/assets/logo.svg" alt="Logo">
+      <strong>Grocery Web</strong>
+    </a>
+
+    <nav class="mainnav visible" id="mainnav">
+      <a href="/">Home</a>
+      <a href="/nearby.html" class="active">Nearby Stores</a>
+      <a href="/cart.html">Shopping Cart</a>
+      <a href="/meal-plan.html">Meal Plans</a>
+      <a href="/profile.html">Profile</a>
+    </nav>
+
+    <button class="loc-pill" id="loc-pill">
+      <img src="/assets/location.svg" alt="📍">
+      <span id="loc-pill-label">Detecting location...</span>
+    </button>
+
+    <div class="account">
+      <span id="account-guest">
+        <a class="btn-outline" href="/auth/signin.html">Sign In</a>
+        <a style="margin-left:6px" class="btn" href="/auth/signup.html">Sign Up</a>
+      </span>
+      <span id="account-user" style="display:none">
+        <a href="/profile.html">Profile</a>
+        <a id="logout-link" style="margin-left:10px" href="#">Logout</a>
+      </span>
+    </div>
+  </header>
+
+  <div class="ambient" aria-hidden="true"></div>
+
+  <main class="container product-container">
+    <!-- Page header -->
+    <div class="section-head product-head">
+      <h2 id="pageTitle" class="product-title">Products</h2>
+      <div class="head-actions">
+        <span id="storeBadge" class="badge-store">— …</span>
+        <a id="backBtn" class="btn btn-small btn-outline" href="javascript:void(0)">← Back</a>
+      </div>
+    </div>
+
+    <!-- Category panel (glassy) -->
+    <section id="categories" class="glass card-block">
+      <p class="cat-lead">Choose a category:</p>
+      <div id="catGrid" class="cat-grid">
+        <!-- skeletons replaced by JS -->
+        <div class="glass cat-card skeleton"></div>
+        <div class="glass cat-card skeleton"></div>
+        <div class="glass cat-card skeleton"></div>
+        <div class="glass cat-card skeleton"></div>
+        <div class="glass cat-card skeleton"></div>
+        <div class="glass cat-card skeleton"></div>
+      </div>
+    </section>
+
+    <!-- Products (edge-to-edge standalone cards; no small wrapper) -->
+    <section id="products" class="prd-edge" style="display:none">
+      <div id="productGrid" class="prd-grid"></div>
+      <p id="emptyState" class="pg-footer" style="display:none">No items found.</p>
+    </section>
+  </main>
+
+  <footer class="footer">Prices are mock data for demo only.</footer>
+</body>
+</html>

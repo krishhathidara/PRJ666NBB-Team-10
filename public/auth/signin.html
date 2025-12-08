@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign In | Grocery Web</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/styles/auth.css" />
+</head>
+<body class="signin-body">
+  <div class="signin-container">
+    
+    <div class="left-section">
+      <div class="left-content">
+        <h1>“Save More, Eat Smarter”</h1>
+        <p>Compare grocery prices instantly and plan AI-powered meals effortlessly.</p>
+      </div>
+      <img src="../assets/items3.png" alt="groceries" class="items-img">
+    </div>
+
+    <div class="right-section">
+      <div class="glass-panel">
+        <h2>Sign In</h2>
+        <p>Access your grocery comparisons and saved lists</p>
+
+        <!-- ✅ Functional fields -->
+        <input type="email" id="email" class="input" placeholder="Email" required />
+        <input type="password" id="password" class="input" placeholder="Password" minlength="6" required />
+        <button id="signin-btn" class="neon-btn">Sign In</button>
+
+        <div id="signin-error" style="color:#f87171; margin-top:10px; font-size:0.9rem; display:none;"></div>
+
+        <div class="small-links">
+          New here? <a href="/auth/signup.html">Create account</a><br>
+          Forgot password? <a href="#" id="reset-link">Reset It</a>
+        </div>
+
+        <div class="divider">OR</div>
+
+        <!-- ✅ Google login link -->
+        <a href="/api/auth/google" class="oauth-btn">
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" class="google-icon">
+          Continue with Google
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ✅ Functional JS (added only at bottom, no UI change) -->
+  <script>
+    const signinBtn = document.getElementById('signin-btn');
+    const emailInput = document.getElementById('email');
+    const passInput = document.getElementById('password');
+    const errorBox = document.getElementById('signin-error');
+
+    signinBtn.addEventListener('click', async () => {
+      const email = emailInput.value.trim();
+      const password = passInput.value.trim();
+
+      if (!email || !password) {
+        errorBox.textContent = "Please enter both email and password.";
+        errorBox.style.display = "block";
+        return;
+      }
+
+      signinBtn.textContent = "Signing in...";
+      signinBtn.disabled = true;
+      errorBox.style.display = "none";
+
+      try {
+        const res = await fetch('/api/auth/signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Invalid credentials.");
+        }
+
+        // ✅ Redirect on success
+        window.location.href = "/profile.html";
+
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = "block";
+      } finally {
+        signinBtn.textContent = "Sign In";
+        signinBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

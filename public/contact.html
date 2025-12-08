@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact Us – Grocery Web</title>
+  <link rel="stylesheet" href="/styles/base.css" />
+  <script src="/scripts/ambient.js" defer></script>
+  <style>
+    body {
+      background: radial-gradient(circle at top right, #0f1f4d, #0a1640 60%, #061030);
+      color: #e2e8f0;
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+    }
+
+    header.nav.glossy-nav {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px) saturate(1.6);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #f9fafb;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .nav .brand img {
+      height: 28px;
+      width: auto;
+    }
+
+    .mainnav {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .mainnav a {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .mainnav a:hover {
+      background: rgba(255,255,255,0.1);
+      color: #60a5fa;
+    }
+
+    .mainnav a.active {
+      background: rgba(59,130,246,0.25);
+      color: #60a5fa;
+      font-weight: 600;
+    }
+
+    .account a {
+      color: #93c5fd;
+      text-decoration: none;
+      margin-left: 10px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #3b82f6, #22c55e);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .btn-outline {
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 14px;
+      border-radius: 8px;
+    }
+
+    .page-container {
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 0 16px 60px;
+    }
+
+    .contact-card {
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 24px 24px 32px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      backdrop-filter: blur(12px);
+    }
+
+    .contact-card h1 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      color: #f9fafb;
+    }
+
+    .contact-card p.lead {
+      margin: 0 0 24px;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+    }
+
+    form#contactForm {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    form#contactForm .full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.85rem;
+      color: #e5e7eb;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(148,163,184,0.7);
+      background: rgba(15,23,42,0.5);
+      color: #f9fafb;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 1px rgba(96,165,250,0.5);
+    }
+
+    .form-footer {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+
+    #contactStatus {
+      font-size: 0.9rem;
+    }
+
+    #contactStatus.success {
+      color: #4ade80;
+    }
+
+    #contactStatus.error {
+      color: #f97373;
+    }
+
+    .footer {
+      text-align: center;
+      color: #9ca3af;
+      padding-bottom: 30px;
+    }
+
+    @media (max-width: 640px) {
+      form#contactForm {
+        grid-template-columns: 1fr;
+      }
+      .form-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+<header class="nav glossy-nav">
+  <a class="brand" href="/">
+    <img src="/assets/logo.svg" alt="Logo">
+    <strong>Grocery Web</strong>
+  </a>
+  <nav class="mainnav">
+    <a href="/">Home</a>
+    <a href="/nearby.html">Nearby</a>
+    <a href="/cart.html">Cart</a>
+    <a href="/meal-plan.html">Meal Plan</a>
+    <a href="/profile.html">Profile</a>
+    <a href="/contact.html" class="active">Contact Us</a>
+  </nav>
+  <div class="account">
+    <span id="account-guest">
+      <a class="btn-outline" href="/auth/signin.html">Sign In</a>
+      <a class="btn" href="/auth/signup.html">Sign Up</a>
+    </span>
+    <span id="account-user" style="display:none">
+      <a href="/profile.html">Profile</a>
+      <a id="logout-link" href="#">Logout</a>
+    </span>
+  </div>
+</header>
+
+<main class="page-container">
+  <section class="contact-card">
+    <h1>Contact Us</h1>
+    <p class="lead">
+      Have a question, feedback, or an issue with your grocery orders? Send us a message
+      and we’ll get back to you as soon as possible. You’ll also receive a confirmation email
+      with your ticket ID.
+    </p>
+
+    <form id="contactForm" novalidate>
+      <div class="full">
+        <label for="contactName">Full Name</label>
+        <input type="text" id="contactName" name="name" placeholder="Enter your full name" required />
+      </div>
+
+      <div class="full">
+        <label for="contactEmail">Email Address</label>
+        <input type="email" id="contactEmail" name="email" placeholder="you@example.com" required />
+      </div>
+
+      <div class="full">
+        <label for="contactSubject">Subject</label>
+        <input type="text" id="contactSubject" name="subject" placeholder="How can we help you?" required />
+      </div>
+
+      <div class="full">
+        <label for="contactMessage">Message</label>
+        <textarea id="contactMessage" name="message" placeholder="Describe your issue or question" required></textarea>
+      </div>
+
+      <div class="form-footer">
+        <button type="submit" id="contactSubmit" class="btn">Send Message</button>
+        <span id="contactStatus"></span>
+      </div>
+    </form>
+  </section>
+</main>
+
+<footer class="footer">© 2025 Grocery Web</footer>
+
+<script src="/scripts/session.js"></script>
+<script src="/scripts/contact.js"></script>
+</body>
+</html>

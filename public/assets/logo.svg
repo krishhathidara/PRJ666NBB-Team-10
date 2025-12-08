@@ -1,0 +1,12 @@
+<svg width="120" height="36" viewBox="0 0 120 36" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo">
+<defs>
+<linearGradient id="g" x1="0" x2="1">
+<stop offset="0%" stop-color="#48c774"/>
+<stop offset="100%" stop-color="#2fb56a"/>
+</linearGradient>
+</defs>
+<rect rx="8" ry="8" width="120" height="36" fill="#101720" stroke="#213040"/>
+<g transform="translate(10,24)" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="url(#g)">
+<text>Grocery Web</text>
+</g>
+</svg>

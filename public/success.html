@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order Success · Grocery Web</title>
+
+  <!-- Base + receipt styles -->
+  <link rel="stylesheet" href="/styles/base.css" />
+  <link rel="stylesheet" href="/styles/receipt.css" />
+
+  <!-- Ambient background + session handling -->
+  <script src="/scripts/ambient.js" defer></script>
+  <script src="/scripts/session.js" defer></script>
+
+  <!-- PDF libraries (no integrity so browser won’t block them) -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+    defer
+  ></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+    defer
+  ></script>
+
+  <!-- Receipt logic -->
+  <script src="/scripts/order-success.js" defer></script>
+</head>
+<body>
+<header class="nav glossy-nav">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="Logo"><strong>Grocery Web</strong></a>
+  <nav class="mainnav" id="mainnav">
+    <a href="/">Home</a>
+    <a href="/nearby.html">Nearby Stores</a>
+    <a href="/cart.html">Shopping Cart</a>
+    <a href="/meal-plan.html">Meal Plan</a>
+    <a href="/profile.html">Profile</a>
+  </nav>
+  <div class="account">
+    <span id="account-guest">
+      <a class="btn-outline" href="/auth/signin.html">Sign In</a>
+      <a class="btn" style="margin-left:6px" href="/auth/signup.html">Sign Up</a>
+    </span>
+    <span id="account-user" style="display:none">
+      <a href="/profile.html">Profile</a>
+      <a id="logout-link" style="margin-left:10px" href="#">Logout</a>
+    </span>
+  </div>
+</header>
+
+<main class="container success-container">
+  <section class="section">
+    <!-- Top success header -->
+    <div class="success-header">
+      <div class="success-title">
+        <div class="check-pill">✓</div>
+        <div>
+          <h1>Thank you! Your order is confirmed</h1>
+          <p id="receipt-status-label" class="muted">Generating receipt…</p>
+        </div>
+      </div>
+
+      <div class="success-actions">
+        <div id="order-summary-line" class="muted summary-line"></div>
+        <div class="btn-row">
+          <button id="btn-print" class="btn-outline pill">Print</button>
+          <button id="btn-download-pdf" class="btn pill pill-primary">Download PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main receipt card (also used for PDF/print) -->
+    <article id="receipt-card" class="receipt-card card">
+      <header class="receipt-card-head">
+        <div class="brand-block">
+          <div class="brand-badge">
+            <img src="/assets/logo.svg" alt="Grocery Web" class="brand-mark" />
+            <span>Grocery Web</span>
+          </div>
+          <div class="brand-copy">
+            <div class="brand-name">Grocery Web</div>
+            <div class="brand-tagline">Smart grocery planning &amp; pickup</div>
+          </div>
+        </div>
+        <div class="receipt-title">
+          <div class="title-main">Order Receipt</div>
+        </div>
+      </header>
+
+      <!-- Meta rows -->
+      <section class="receipt-meta">
+        <div class="meta-column">
+          <div class="meta-row">
+            <span class="meta-label">Order #</span>
+            <span class="meta-value" id="order-id">—</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Customer</span>
+            <span class="meta-value" id="order-email">—</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Delivery</span>
+            <span class="meta-value" id="order-delivery">Pickup at store</span>
+          </div>
+        </div>
+        <div class="meta-column meta-column-right">
+          <div class="meta-row">
+            <span class="meta-label">Placed on</span>
+            <span class="meta-value" id="order-date">—</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Payment</span>
+            <span class="meta-value" id="order-payment">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Error strip -->
+      <div id="receipt-error" class="receipt-error" hidden></div>
+
+      <!-- Store sections injected here -->
+      <div id="store-sections" class="receipt-stores"></div>
+
+      <!-- Grand total -->
+      <footer class="receipt-footer">
+        <div class="grand-total-label">
+          <span>Grand Total</span>
+          <span id="grand-total-amount">CA$0.00</span>
+        </div>
+      </footer>
+    </article>
+
+    <!-- Back to home button -->
+    <div class="back-row">
+      <a href="/" class="btn-link-pill">← Back to Home</a>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">© 2025 Grocery Web</footer>
+</body>
+</html>
