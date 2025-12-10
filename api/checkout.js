@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 module.exports = async (req, res) => {
+  // 1. Method Check
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -11,99 +12,93 @@ module.exports = async (req, res) => {
   try {
     console.log('POST /api/checkout received');
     
+    // 2. Auth Check
     const cookie = req.headers.cookie || "";
     const token = cookie
       .split(";")
       .find((c) =>
         c.trim().startsWith((process.env.AUTH_COOKIE || "app_session") + "=")
       );
-    if (!token) {
-      console.log('No token found in request');
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+      
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     const decoded = jwt.verify(
       token.split("=")[1],
       process.env.JWT_SECRET || "dev-secret"
     );
-    const email = decoded.email;
-    if (!email) {
-      console.log('No email in token');
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const id = decoded.id;
-    if (!email) {
-      console.log('No id in token');
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    
+    const { email, id } = decoded;
+    if (!email || !id) return res.status(401).json({ error: "Unauthorized" });
     
     console.log('User authenticated:', email, 'ID:', id);
     
+    // 3. Database Connection
     const db = await getDb();
     const cart = db.collection("cart"); 
     
-    // Get all cart items for this user
     const cartItems = await cart.find({ userEmail: email }).toArray();
     
-    console.log('Cart items found:', cartItems);
-    
     if (!cartItems || cartItems.length === 0) {
-      console.log('Cart is empty for user:', email);
       return res.status(400).json({ error: "Cart is empty" });
     }
 
-    // Calculate totals
-    const subtotal = cartItems.reduce((sum, item) => 
-      sum + (item.price || 0) * (item.quantity || 1), 0
-    );
-    const tax = subtotal * 0.13; // 13% HST
-    const total = subtotal + tax;
+    // 4. Clean Items & Calculate Totals
+    // Ensure every item has a store, price, and quantity for accurate splitting later
+    const cleanItems = cartItems.map(item => ({
+        ...item,
+        store: item.store || "General Store", // Fallback
+        price: parseFloat(item.price || 0),
+        quantity: parseInt(item.quantity || 1)
+    }));
 
-    //check which APP_URL is current on and use that for redirecting after payment
-    const APP_URL = process.env.APP_URL || "http://localhost:3000";
+    const subtotal = cleanItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const tax = subtotal * 0.13; 
+    const total = parseFloat((subtotal + tax).toFixed(2));
 
-    console.log('Using APP_URL:', APP_URL);
+    // Determine Primary Store Name (for top-level order label)
+    const primaryStore = cleanItems[0].store;
 
-    // Create Stripe session
+    // 5. Determine Redirect URL
+    const origin = req.headers.origin || process.env.APP_URL || "http://localhost:3000";
+
+    // 6. Create Stripe Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: cartItems.map(item => ({
+      line_items: cleanItems.map(item => ({
         price_data: {
           currency: 'cad',
-          product_data: { name: `${item.name} (${item.store || 'Store'})` },
-          unit_amount: Math.round((item.price || 0) * 100) // Cents
+          product_data: { 
+            name: `${item.name} (${item.store})`,
+            metadata: { productId: item.productId }
+          },
+          unit_amount: Math.round(item.price * 100)
         },
-        quantity: item.quantity || 1
+        quantity: item.quantity
       })),
       mode: 'payment',
-      success_url: `${process.env.APP_URL}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.APP_URL}/cart.html` ,
-      metadata: {
-        userId: id,
-        userEmail: email  //store email in metadata for webhook
-      }
+      success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cart.html`,
+      customer_email: email, 
+      metadata: { userId: id, userEmail: email }
     });
     
-    console.log('Stripe session created:', session.id);
-
-    // Save order to MongoDB
+    // 7. Save Pending Order to Database
+    // Saving 'cleanItems' guarantees api/users.js can split the cost by store later
     await db.collection("orders").insertOne({
       userId: id,
-      userEmail: email, // Use email to match your cart structure
-      items: cartItems, // Store the cart items array
-      total: total,
+      userEmail: email, 
+      items: cleanItems, 
+      total: total, 
+      amount_total: Math.round(total * 100), 
+      storeName: primaryStore, 
       paymentMethod: 'credit_card',
-      paymentStatus: 'pending',
+      paymentStatus: 'pending', 
       stripeSessionId: session.id,
       createdAt: new Date(),
       updatedAt: new Date()
     });
     
-    console.log('Order saved with sessionId:', session.id, 'userId:', id, 'userEmail:', email);
-
-    // Clear cart - delete all items for this user
-    // await cart.deleteMany({ userEmail: email });
-    // console.log('Cart cleared for user:', email);
+    console.log('Order saved:', session.id);
 
     return res.json({ sessionId: session.id });
   } catch (err) {

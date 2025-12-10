@@ -11,7 +11,7 @@
   <script src="/scripts/ambient.js" defer></script>
 
   <style>
-    /* ---- Theme & Background ---- */
+    /* ---- Theme & Variables ---- */
     :root {
       --primary: #3b82f6;
       --success: #22c55e;
@@ -33,10 +33,14 @@
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    
+    .loading-pulse {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
     }
 
     /* ---- Navbar ---- */
@@ -51,7 +55,6 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }
 
     .nav .brand {
@@ -78,6 +81,7 @@
     .mainnav a.active { color: #60a5fa; background: rgba(59,130,246,0.15); }
 
     .account a { text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    
     .btn-outline {
       border: 1px solid rgba(255,255,255,0.2);
       padding: 8px 16px;
@@ -85,6 +89,7 @@
       color: #fff;
       background: transparent;
       cursor: pointer;
+      text-decoration: none;
       transition: 0.2s;
     }
     .btn-outline:hover { background: rgba(255,255,255,0.05); border-color: #fff; }
@@ -98,6 +103,7 @@
       border: none;
       cursor: pointer;
       font-weight: 600;
+      display: inline-block;
       transition: transform 0.2s, box-shadow 0.2s;
     }
     .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4); }
@@ -136,16 +142,14 @@
       justify-content: center;
       cursor: pointer;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      transition: transform 0.2s;
     }
-    .avatar-edit-icon:hover { transform: scale(1.1); }
 
     h1 { margin: 0; font-size: 2rem; letter-spacing: -0.5px; }
     .email-text { color: #94a3b8; margin-top: 5px; font-size: 1rem; }
 
-    /* ---- Edit Form (Hidden by default) ---- */
+    /* ---- Edit Form ---- */
     .edit-profile-modal {
-      display: none; /* Toggled by JS */
+      display: none;
       background: rgba(15, 23, 42, 0.95);
       padding: 24px;
       border-radius: 16px;
@@ -153,7 +157,6 @@
       max-width: 400px;
       margin: 20px auto;
       text-align: left;
-      animation: fadeIn 0.3s;
     }
     .edit-profile-modal input, .edit-profile-modal select {
       width: 100%;
@@ -163,7 +166,7 @@
       border: 1px solid #334155;
       background: #1e293b;
       color: #fff;
-      box-sizing: border-box; /* Fix width issues */
+      box-sizing: border-box; 
     }
     .edit-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
@@ -188,11 +191,11 @@
     }
     .card h2 { margin-top: 0; font-size: 1.25rem; margin-bottom: 16px; color: #f1f5f9; }
 
-    /* Top Stats Row */
+    /* Stats Row */
     .stats-row {
       grid-column: 1 / -1;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 16px;
     }
     .stat-tile {
@@ -204,21 +207,9 @@
     }
     .stat-tile:hover { background: rgba(255,255,255,0.06); }
     .stat-val { font-size: 1.8rem; font-weight: 800; background: linear-gradient(to right, #60a5fa, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .stat-lbl { color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; margin-top: 5px; letter-spacing: 0.5px; }
+    .stat-lbl { color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; margin-top: 5px; }
 
-    /* Chart Area */
     .chart-container { position: relative; height: 220px; display: flex; justify-content: center; }
-
-    /* List Items */
-    ul.data-list { list-style: none; padding: 0; margin: 0; }
-    ul.data-list li {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      color: #cbd5e1;
-    }
-    ul.data-list li span { color: #fff; font-weight: 600; }
 
     /* Progress Bar */
     .progress-container {
@@ -239,7 +230,7 @@
     /* Receipts Grid */
     .receipts-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
       gap: 16px;
       margin-top: 20px;
     }
@@ -248,13 +239,17 @@
       background: #000;
       border-radius: 12px;
       overflow: hidden;
-      position: relative;
       border: 1px solid var(--glass-border);
-      transition: transform 0.2s;
     }
-    .receipt-item:hover { transform: scale(1.03); }
     .receipt-item img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
-    .receipt-item:hover img { opacity: 1; }
+
+    /* Scan Status */
+    #scan-status {
+        margin-top: 10px; 
+        font-size: 0.9rem; 
+        color: #f59e0b; 
+        display: none;
+    }
 
     footer { text-align: center; color: #64748b; padding: 40px 0; font-size: 0.9rem; }
   </style>
@@ -271,13 +266,12 @@
     <a href="/">Home</a>
     <a href="/nearby.html">Nearby</a>
     <a href="/cart.html">Cart</a>
-    <a href="/meal-plan.html">Meal Plan</a>
+    <a href="/meal-plan.html">Meals</a>
     <a href="/profile.html" class="active">Profile</a>
   </nav>
   <div class="account">
     <span id="account-guest">
       <a class="btn-outline" href="/auth/signin.html">Sign In</a>
-      <a class="btn" href="/auth/signup.html">Sign Up</a>
     </span>
     <span id="account-user" style="display:none; display:flex; gap:10px; align-items:center;">
       <a href="/profile.html" style="color:#fff;">My Profile</a>
@@ -288,13 +282,8 @@
 
 <section class="profile-hero">
   <div class="avatar-container">
-    <img id="profile-avatar" class="profile-avatar" src="/assets/profile.png" alt="Profile Picture">
-    <div class="avatar-edit-icon" id="triggerAvatarInput" title="Change Avatar">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-        <circle cx="12" cy="13" r="4"></circle>
-      </svg>
-    </div>
+    <img id="profile-avatar" class="profile-avatar" src="/assets/profile.png" alt="Profile">
+    <div class="avatar-edit-icon" id="triggerAvatarInput" title="Change Avatar">📷</div>
   </div>
   <input type="file" id="avatarInput" accept="image/*" style="display:none">
 
@@ -307,8 +296,8 @@
 
   <div id="editProfileForm" class="edit-profile-modal">
     <h3>Edit Details</h3>
-    <input type="text" id="editName" placeholder="Enter Full Name">
-    <input type="email" id="editEmail" placeholder="Enter Email">
+    <input type="text" id="editName" placeholder="Full Name">
+    <input type="email" id="editEmail" placeholder="Email">
     <select id="editFavStore">
       <option value="">Select Favorite Store</option>
       <option value="Walmart">Walmart</option>
@@ -325,7 +314,6 @@
 </section>
 
 <main class="dashboard-grid">
-  
   <div class="stats-row">
     <div class="stat-tile">
       <div class="stat-val" id="valTotalSpent">$0.00</div>
@@ -353,34 +341,36 @@
   </div>
 
   <div class="card">
-    <h2>Quick Insights</h2>
-    <ul class="data-list">
-      <li>Lists Created: <span id="insightLists">0</span></li>
-      <li>Most Bought Item: <span id="insightMostBought">—</span></li>
-      <li>Profile Favorite: <span id="insightProfileFav">—</span></li>
-    </ul>
-
-    <h2 style="margin-top: 30px;">Monthly Goal</h2>
+    <h2>Monthly Goal</h2>
     <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#cbd5e1;">
-      <span id="goalText">Progress</span>
+      <span id="goalText">0% Used</span>
       <span>Target: $200.00</span>
     </div>
     <div class="progress-container">
       <div class="progress-bar-fill" id="goalBar"></div>
     </div>
+    
+    <h2 style="margin-top:30px;">Quick Insights</h2>
+    <ul style="list-style:none; padding:0; line-height:2;">
+      <li>Most Bought: <strong id="insightMostBought" style="color:#fff">—</strong></li>
+      <li>Lists Created: <strong id="insightLists" style="color:#fff">0</strong></li>
+      <li>Fav Store: <strong id="insightProfileFav" style="color:#fff">—</strong></li>
+    </ul>
   </div>
 
   <div class="card" style="grid-column: 1 / -1;">
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <h2>Your Receipts</h2>
-      <label class="btn" style="font-size: 0.9rem;">
+      
+      <label class="btn" for="receiptInputProfile">
         Scan New Receipt
-        <input type="file" id="receiptInputProfile" accept="image/*" capture="environment" style="display:none">
       </label>
+      <input type="file" id="receiptInputProfile" accept="image/*" capture="environment" style="display:none">
     </div>
+
+    <div id="scan-status">Scanning receipt... please wait...</div>
     
-    <div id="profile-receipts" class="receipts-grid">
-      </div>
+    <div id="profile-receipts" class="receipts-grid"></div>
     
     <div style="text-align:center; margin-top:20px;">
       <a href="/receipts.html" class="btn-outline">View Full History</a>

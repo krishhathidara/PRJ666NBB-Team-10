@@ -7,6 +7,10 @@ async function initReceiptPage() {
   const summaryLine = document.getElementById('order-summary-line');
   const errorBox = document.getElementById('receipt-error');
   const storeSections = document.getElementById('store-sections');
+  
+  // New elements for tax breakdown
+  const subtotalEl = document.getElementById('subtotal-amount');
+  const taxEl = document.getElementById('tax-amount');
   const grandTotalEl = document.getElementById('grand-total-amount');
 
   const meta = {
@@ -77,7 +81,7 @@ async function initReceiptPage() {
     // ===== Meta info =====
     if (meta.id) {
       meta.id.textContent =
-        order._id || order.stripeSessionId || sessionId || '—';
+        `#${(order._id || order.stripeSessionId || sessionId).slice(-8).toUpperCase()}`;
     }
 
     const placed = order.createdAt ? new Date(order.createdAt) : null;
@@ -108,7 +112,7 @@ async function initReceiptPage() {
 
     if (summaryLine) {
       const parts = [];
-      if (order.stripeSessionId) parts.push(`Order ${order.stripeSessionId}`);
+      if (order.stripeSessionId) parts.push(`Order ${order.stripeSessionId.slice(-8)}`);
       if (placed)
         parts.push(
           placed.toLocaleString(undefined, {
@@ -127,70 +131,77 @@ async function initReceiptPage() {
     const items = Array.isArray(order.items) ? order.items : [];
     const byStore = {};
 
+    let calculatedSubtotal = 0;
+
     for (const item of items) {
+      // Robust store detection for grouping
       const store = item.store || order.storeName || 'Other store';
       if (!byStore[store]) byStore[store] = [];
       byStore[store].push(item);
+      
+      // Accumulate subtotal
+      const qty = Number(item.quantity || item.qty || 1);
+      const unit = getUnitPrice(item);
+      const line = getLineTotal(item, qty, unit);
+      calculatedSubtotal += line;
     }
 
-    let grandTotal = 0;
     const currency = 'CAD';
 
+    // Generate HTML for each store
     const sectionsHtml =
       Object.entries(byStore)
         .map(([storeName, items]) => {
-          let storeSubtotal = 0;
+          // New: Get Address
+          const address = getStoreAddress(storeName);
+          let storeSectionTotal = 0;
 
           const rows = items
             .map((it) => {
               const qty = Number(it.quantity || it.qty || 1);
               const unit = getUnitPrice(it);
               const line = getLineTotal(it, qty, unit);
-              storeSubtotal += line;
-
+              storeSectionTotal += line;
+              
               return `
               <tr>
-                <td class="col-name">${escapeHtml(it.name || '')}</td>
-                <td class="col-unit">${formatMoney(unit, currency)}</td>
-                <td class="col-qty">× ${qty}</td>
-                <td class="col-line">${formatMoney(line, currency)}</td>
+                <td class="col-name">
+                    <div style="font-weight:600; color:#fff;">${escapeHtml(it.name || '')}</div>
+                    <div style="font-size:0.8rem; color:#94a3b8;">${it.description || ''}</div>
+                </td>
+                <td class="col-unit col-right">${formatMoney(unit, currency)}</td>
+                <td class="col-qty col-right">× ${qty}</td>
+                <td class="col-line col-right" style="font-weight:600">${formatMoney(line, currency)}</td>
               </tr>`;
             })
             .join('');
 
-          grandTotal += storeSubtotal;
-
-          const locationText = buildLocationText(items[0]);
-
           return `
-          <section class="receipt-store">
-            <header class="receipt-store-head">
-              <div>
-                <div class="store-name">${escapeHtml(storeName)}</div>
-                <div class="store-meta">${locationText}</div>
+          <div class="store-section" style="background:rgba(255,255,255,0.03); border-radius:12px; padding:20px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.05);">
+            <div class="store-header" style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:flex-end;">
+              <div class="store-title">
+                <h4 style="margin:0; color:#3b82f6; font-size:1.2rem;">${escapeHtml(storeName)}</h4>
+                <div class="store-address" style="font-size:0.85rem; color:#94a3b8; margin-top:4px;">📍 ${escapeHtml(address)}</div>
               </div>
-              <div class="store-subtotal-label">
-                <span>Subtotal — ${escapeHtml(storeName)}</span>
-                <span class="store-subtotal-amount">${formatMoney(
-                  storeSubtotal,
-                  currency
-                )}</span>
+              <div style="text-align:right;">
+                 <div style="font-size:0.8rem; color:#94a3b8;">Section Subtotal</div>
+                 <div style="font-weight:700; color:#fff;">${formatMoney(storeSectionTotal, currency)}</div>
               </div>
-            </header>
-            <table class="receipt-table">
+            </div>
+            <table style="width:100%; border-collapse:collapse;">
               <thead>
-                <tr>
-                  <th class="col-name">Product</th>
-                  <th class="col-unit">Unit</th>
-                  <th class="col-qty">Qty</th>
-                  <th class="col-line">Line Total</th>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                  <th class="col-name" style="text-align:left; padding-bottom:8px; color:#94a3b8;">Product</th>
+                  <th class="col-unit col-right" style="text-align:right; padding-bottom:8px; color:#94a3b8;">Unit Price</th>
+                  <th class="col-qty col-right" style="text-align:right; padding-bottom:8px; color:#94a3b8;">Qty</th>
+                  <th class="col-line col-right" style="text-align:right; padding-bottom:8px; color:#94a3b8;">Total</th>
                 </tr>
               </thead>
               <tbody>
                 ${rows}
               </tbody>
             </table>
-          </section>`;
+          </div>`;
         })
         .join('') ||
       `<p class="muted">No items found for this order.</p>`;
@@ -199,16 +210,26 @@ async function initReceiptPage() {
       storeSections.innerHTML = sectionsHtml;
     }
 
-    const total = computeOrderTotal(order, grandTotal);
+    // ===== Calculate Tax & Totals =====
+    // 13% Tax Calculation to match profile logic
+    const taxRate = 0.13;
+    const taxAmount = calculatedSubtotal * taxRate;
+    const finalTotal = calculatedSubtotal + taxAmount;
+
+    // Update DOM
+    if (subtotalEl) subtotalEl.textContent = formatMoney(calculatedSubtotal, currency);
+    if (taxEl) taxEl.textContent = formatMoney(taxAmount, currency);
+    
+    // Use explicit calculation for Grand Total display
     if (grandTotalEl) {
-      grandTotalEl.textContent = formatMoney(total, currency);
+      grandTotalEl.textContent = formatMoney(finalTotal, currency);
     }
   } catch (err) {
     console.error('Receipt load error:', err);
     showError(err.message || String(err));
   }
 
-  // ===== Helpers =====
+  // ===== Helpers (PRESERVED) =====
 
   function showError(message) {
     console.error('Receipt error:', message);
@@ -216,7 +237,7 @@ async function initReceiptPage() {
     if (storeSections) storeSections.innerHTML = '';
     if (errorBox) {
       errorBox.textContent = 'Error: ' + message;
-      errorBox.hidden = false;
+      errorBox.style.display = 'block'; 
     } else {
       alert('Error: ' + message);
     }
@@ -225,7 +246,7 @@ async function initReceiptPage() {
   function formatMoney(amount, currency) {
     const n = Number(amount || 0);
     try {
-      return new Intl.NumberFormat(undefined, {
+      return new Intl.NumberFormat('en-CA', {
         style: 'currency',
         currency: currency || 'CAD',
       }).format(n);
@@ -241,6 +262,17 @@ async function initReceiptPage() {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // NEW Helper for Address
+  function getStoreAddress(storeName) {
+      const n = (storeName || '').toLowerCase();
+      if (n.includes('walmart')) return '1000 Gerrard St E, Toronto, ON';
+      if (n.includes('metro')) return '425 Bloor St W, Toronto, ON';
+      if (n.includes('freshco')) return '2440 Dundas St W, Toronto, ON';
+      if (n.includes('no frills') || n.includes('nofrills')) return '900 Dufferin St, Toronto, ON';
+      if (n.includes('t&t')) return '222 Cherry St, Toronto, ON';
+      return 'Store Location (Pickup)';
   }
 
   function buildLocationText(sampleItem) {
@@ -319,20 +351,24 @@ async function initReceiptPage() {
   }
 
   async function handleDownloadPdf() {
-    if (!window.html2canvas || !window.jspdf?.jsPDF) {
-      alert('PDF libraries not loaded yet. Please try again in a moment.');
+    // UPDATED ID to match the new HTML structure
+    const receiptEl = document.getElementById('receipt-card');
+    if (!receiptEl || !window.html2canvas || !window.jspdf?.jsPDF) {
+      alert('PDF libraries not loaded yet. Please try again.');
       return;
     }
 
-    const receiptEl = document.getElementById('receipt-card');
-    if (!receiptEl) return;
-
     if (statusLabel) statusLabel.textContent = 'Rendering PDF…';
+    
+    // Slight style modification for clean print
+    const originalBg = receiptEl.style.background;
+    receiptEl.style.background = '#1e293b';
 
     try {
       const canvas = await window.html2canvas(receiptEl, {
         scale: 2,
         useCORS: true,
+        backgroundColor: '#1e293b' 
       });
       const imgData = canvas.toDataURL('image/png');
 
@@ -366,6 +402,7 @@ async function initReceiptPage() {
       console.error('PDF generation error:', err);
       showError('Unable to generate PDF');
     } finally {
+      receiptEl.style.background = originalBg;
       if (statusLabel) statusLabel.textContent = 'Receipt ready';
     }
   }

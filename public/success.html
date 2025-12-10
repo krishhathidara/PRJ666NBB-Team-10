@@ -3,140 +3,314 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Order Success · Grocery Web</title>
-
-  <!-- Base + receipt styles -->
+  <title>Order Confirmed | Grocery Web</title>
+  
   <link rel="stylesheet" href="/styles/base.css" />
-  <link rel="stylesheet" href="/styles/receipt.css" />
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- Ambient background + session handling -->
-  <script src="/scripts/ambient.js" defer></script>
-  <script src="/scripts/session.js" defer></script>
+  <style>
+    /* ---- Theme Variables ---- */
+    :root {
+      --primary: #3b82f6;
+      --success: #22c55e;
+      --bg-dark: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+    }
 
-  <!-- PDF libraries (no integrity so browser won’t block them) -->
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-    defer
-  ></script>
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
-    defer
-  ></script>
+    body {
+      background: radial-gradient(circle at top center, #1e293b, #0f172a 70%, #020617);
+      color: var(--text-main);
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+    }
 
-  <!-- Receipt logic -->
-  <script src="/scripts/order-success.js" defer></script>
+    /* ---- Animations ---- */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes checkPop {
+      0% { transform: scale(0); }
+      70% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    /* ---- Navbar (Glass) ---- */
+    header.nav.glossy-nav {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    .brand img { height: 28px; width: auto; }
+    
+    .mainnav { display: flex; gap: 20px; }
+    .mainnav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .mainnav a:hover { color: #fff; }
+
+    /* ---- Success Hero ---- */
+    .success-hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+      animation: slideUp 0.8s ease-out;
+    }
+
+    .check-circle {
+      width: 80px;
+      height: 80px;
+      background: var(--success);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 0 30px rgba(34, 197, 94, 0.4);
+      animation: checkPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .check-circle svg { width: 40px; height: 40px; fill: #fff; }
+
+    h1 { margin: 0 0 10px; font-size: 2rem; color: #fff; }
+    p.subtitle { color: var(--text-muted); font-size: 1.1rem; }
+
+    /* ---- Receipt Card ---- */
+    .receipt-container {
+      max-width: 800px;
+      margin: 0 auto 60px;
+      width: 100%;
+      padding: 0 20px;
+      box-sizing: border-box;
+      animation: slideUp 1s ease-out;
+    }
+
+    .receipt-card {
+      background: #1e293b;
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      position: relative;
+    }
+    /* Top decorative strip */
+    .receipt-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, var(--primary), var(--success));
+    }
+
+    .receipt-header {
+      padding: 30px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .company-info h3 { margin: 0; color: #fff; font-size: 1.4rem; }
+    .company-info p { margin: 5px 0 0; color: var(--text-muted); font-size: 0.9rem; }
+
+    .order-meta {
+      text-align: right;
+    }
+    .order-meta div { margin-bottom: 5px; font-size: 0.9rem; color: var(--text-muted); }
+    .order-meta strong { color: #fff; margin-left: 5px; }
+
+    .receipt-body {
+      padding: 30px;
+    }
+
+    /* Store Section */
+    .store-section {
+      margin-bottom: 30px;
+    }
+    .store-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 15px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 10px;
+    }
+    .store-title h4 { margin: 0; color: var(--primary); font-size: 1.1rem; }
+    .store-address { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+    
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th { text-align: left; color: var(--text-muted); padding: 10px 0; font-weight: 500; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.03); color: #fff; }
+    td.col-right { text-align: right; }
+    td.col-qty { color: var(--text-muted); }
+    tr:last-child td { border-bottom: none; }
+
+    /* Totals */
+    .receipt-footer {
+      background: rgba(0,0,0,0.2);
+      padding: 20px 30px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+    .grand-total {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .grand-total span:last-child { color: var(--success); }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 40px;
+    }
+    .btn {
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; }
+    .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+
+    .error-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+      display: none;
+    }
+
+    @media print {
+      body { background: #fff; color: #000; }
+      .nav, .actions, .success-hero .check-circle { display: none; }
+      .receipt-card { box-shadow: none; border: 1px solid #ccc; color: #000; }
+      .receipt-card::before { display: none; }
+      .company-info h3, .order-meta strong, td, th { color: #000 !important; }
+    }
+  </style>
 </head>
 <body>
-<header class="nav glossy-nav">
-  <a class="brand" href="/"><img src="/assets/logo.svg" alt="Logo"><strong>Grocery Web</strong></a>
-  <nav class="mainnav" id="mainnav">
-    <a href="/">Home</a>
-    <a href="/nearby.html">Nearby Stores</a>
-    <a href="/cart.html">Shopping Cart</a>
-    <a href="/meal-plan.html">Meal Plan</a>
-    <a href="/profile.html">Profile</a>
-  </nav>
-  <div class="account">
-    <span id="account-guest">
-      <a class="btn-outline" href="/auth/signin.html">Sign In</a>
-      <a class="btn" style="margin-left:6px" href="/auth/signup.html">Sign Up</a>
-    </span>
-    <span id="account-user" style="display:none">
-      <a href="/profile.html">Profile</a>
-      <a id="logout-link" style="margin-left:10px" href="#">Logout</a>
-    </span>
+
+  <header class="nav glossy-nav">
+    <a class="brand" href="/">
+      <img src="/assets/logo.svg" alt="G">
+      Grocery Web
+    </a>
+    <nav class="mainnav">
+      <a href="/">Home</a>
+      <a href="/profile.html">My Profile</a>
+    </nav>
+  </header>
+
+  <div class="success-hero">
+    <div class="check-circle">
+      <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+    </div>
+    <h1 id="receipt-status-label">Payment Confirmed!</h1>
+    <p class="subtitle" id="order-summary-line">Thank you for your purchase.</p>
   </div>
-</header>
 
-<main class="container success-container">
-  <section class="section">
-    <!-- Top success header -->
-    <div class="success-header">
-      <div class="success-title">
-        <div class="check-pill">✓</div>
-        <div>
-          <h1>Thank you! Your order is confirmed</h1>
-          <p id="receipt-status-label" class="muted">Generating receipt…</p>
+  <div class="actions">
+    <button id="btn-print" class="btn btn-outline">
+      🖨️ Print Receipt
+    </button>
+    <button id="btn-download-pdf" class="btn btn-primary">
+      📄 Download PDF
+    </button>
+  </div>
+
+  <div class="receipt-container">
+    <div id="receipt-error" class="error-box"></div>
+
+    <div id="receipt-card" class="receipt-card">
+      <div class="receipt-header">
+        <div class="company-info">
+          <h3>Grocery Web</h3>
+          <p>Smart grocery planning & pickup</p>
+          <p style="margin-top:2px; font-size:0.8rem; color:#64748b;">123 Web Dev Lane, Toronto, ON</p>
+        </div>
+        <div class="order-meta">
+          <div>Order ID: <strong id="order-id">...</strong></div>
+          <div>Date: <strong id="order-date">...</strong></div>
+          <div>Customer: <strong id="order-email">...</strong></div>
+          <div>Payment: <strong id="order-payment">Credit Card</strong></div>
+          <div style="display:none">Delivery: <strong id="order-delivery"></strong></div>
         </div>
       </div>
 
-      <div class="success-actions">
-        <div id="order-summary-line" class="muted summary-line"></div>
-        <div class="btn-row">
-          <button id="btn-print" class="btn-outline pill">Print</button>
-          <button id="btn-download-pdf" class="btn pill pill-primary">Download PDF</button>
-        </div>
+      <div id="store-sections" class="receipt-body">
+        <p style="text-align:center; padding:20px;">Loading order details...</p>
       </div>
-    </div>
 
-    <!-- Main receipt card (also used for PDF/print) -->
-    <article id="receipt-card" class="receipt-card card">
-      <header class="receipt-card-head">
-        <div class="brand-block">
-          <div class="brand-badge">
-            <img src="/assets/logo.svg" alt="Grocery Web" class="brand-mark" />
-            <span>Grocery Web</span>
-          </div>
-          <div class="brand-copy">
-            <div class="brand-name">Grocery Web</div>
-            <div class="brand-tagline">Smart grocery planning &amp; pickup</div>
-          </div>
+      <div class="receipt-footer">
+        <div class="total-row">
+          <span>Subtotal</span>
+          <span id="subtotal-amount">$0.00</span>
         </div>
-        <div class="receipt-title">
-          <div class="title-main">Order Receipt</div>
+        <div class="total-row">
+          <span>HST (13%)</span>
+          <span id="tax-amount">$0.00</span>
         </div>
-      </header>
-
-      <!-- Meta rows -->
-      <section class="receipt-meta">
-        <div class="meta-column">
-          <div class="meta-row">
-            <span class="meta-label">Order #</span>
-            <span class="meta-value" id="order-id">—</span>
-          </div>
-          <div class="meta-row">
-            <span class="meta-label">Customer</span>
-            <span class="meta-value" id="order-email">—</span>
-          </div>
-          <div class="meta-row">
-            <span class="meta-label">Delivery</span>
-            <span class="meta-value" id="order-delivery">Pickup at store</span>
-          </div>
-        </div>
-        <div class="meta-column meta-column-right">
-          <div class="meta-row">
-            <span class="meta-label">Placed on</span>
-            <span class="meta-value" id="order-date">—</span>
-          </div>
-          <div class="meta-row">
-            <span class="meta-label">Payment</span>
-            <span class="meta-value" id="order-payment">—</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Error strip -->
-      <div id="receipt-error" class="receipt-error" hidden></div>
-
-      <!-- Store sections injected here -->
-      <div id="store-sections" class="receipt-stores"></div>
-
-      <!-- Grand total -->
-      <footer class="receipt-footer">
-        <div class="grand-total-label">
+        <div class="grand-total">
           <span>Grand Total</span>
-          <span id="grand-total-amount">CA$0.00</span>
+          <span id="grand-total-amount">$0.00</span>
         </div>
-      </footer>
-    </article>
-
-    <!-- Back to home button -->
-    <div class="back-row">
-      <a href="/" class="btn-link-pill">← Back to Home</a>
+      </div>
     </div>
-  </section>
-</main>
+  </div>
 
-<footer class="footer">© 2025 Grocery Web</footer>
+  <script src="/scripts/order-success.js"></script>
 </body>
 </html>

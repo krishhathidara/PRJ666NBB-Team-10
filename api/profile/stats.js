@@ -11,7 +11,6 @@ function safeNumber(v) {
 }
 
 // Helper: Normalize currency
-// Stripe stores amounts in cents (integers), Receipts usually in dollars (floats)
 function normalizeAmount(doc) {
   // 1. Check for Stripe 'amount_total' (cents)
   if (typeof doc.amount_total === 'number') {
@@ -31,10 +30,8 @@ function normalizeAmount(doc) {
 
 // Helper: Normalize Item Counts
 function normalizeItemsCount(doc) {
-  // If explicitly set
   if (typeof doc.itemsCount === 'number') return doc.itemsCount;
   
-  // Calculate from items array
   if (Array.isArray(doc.items)) {
     return doc.items.reduce((acc, item) => {
       const qty = item.quantity || item.qty || 1;
@@ -46,6 +43,7 @@ function normalizeItemsCount(doc) {
 
 // Helper: Get Store Name
 function getStoreName(doc) {
+  // We prioritize 'storeName' which we now save in checkout.js
   return doc.storeName || 
          doc.store || 
          (doc.summary && doc.summary.storeName) || 
@@ -63,7 +61,7 @@ module.exports = async (req, res) => {
     const db = await getDb();
     const user = getUserFromReq(req);
 
-    // 1. Identify User (by Email AND ID to be thorough)
+    // 1. Identify User
     const emailRaw = (req.query.email || user?.email || "").trim().toLowerCase();
     const userId = user?.id || null;
 
@@ -71,7 +69,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ ok: false, error: "Not authenticated or no email provided" });
     }
 
-    // 2. Build Query to find ALL user data
+    // 2. Build Query to find ALL user data (Including Pending)
     const filterConditions = [];
     
     if (emailRaw) {
@@ -99,7 +97,7 @@ module.exports = async (req, res) => {
 
     let totalSpent = 0;
     let itemsBought = 0;
-    const storeStats = {}; // { "Walmart": { spent: 100, count: 2 } }
+    const storeStats = {}; 
     const itemFrequency = {};
 
     for (const doc of allTransactions) {
@@ -117,7 +115,7 @@ module.exports = async (req, res) => {
       storeStats[store].spent += amt;
       storeStats[store].transactions += 1;
 
-      // Track Items (mainly from orders which have item details)
+      // Track Items
       if (Array.isArray(doc.items)) {
         doc.items.forEach(it => {
           const name = it.name || it.productName || it.description || "Unknown Item";
@@ -128,7 +126,6 @@ module.exports = async (req, res) => {
     }
 
     // 5. Sort & Rank
-    // Convert storeStats object to array
     const sortedStores = Object.values(storeStats).sort((a, b) => b.spent - a.spent);
     
     // Find most bought item
@@ -149,7 +146,7 @@ module.exports = async (req, res) => {
         items: itemsBought,
         transactions: allTransactions.length
       },
-      stores: sortedStores, // For the chart
+      stores: sortedStores,
       favStore: sortedStores.length > 0 ? sortedStores[0].name : "—",
       mostBought: mostBoughtName,
       listsCreated: receipts.length
