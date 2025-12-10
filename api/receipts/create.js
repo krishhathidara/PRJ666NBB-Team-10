@@ -21,16 +21,16 @@ module.exports = async (req, res) => {
 
     const parsed = await parseReceiptAI(imageBase64);
 
-    console.log("🧠 AI Parsed Receipt:", parsed);
+    console.log("🧠 FINAL PARSED RECEIPT:", parsed);
 
     const db = await getDb();
 
     const receiptDoc = {
       userId,
-      storeName: parsed.store,
-      subtotal: parsed.subtotal,
-      tax: parsed.tax,
-      total: parsed.total,
+      storeName: parsed.store || "Unknown Store",
+      subtotal: parsed.subtotal || 0,
+      tax: parsed.tax || 0,
+      total: parsed.total || 0,
       rawText: parsed.rawText || "",
       imageBase64,
       createdAt: new Date()
@@ -39,13 +39,13 @@ module.exports = async (req, res) => {
     const receiptResult = await db.collection("receipts").insertOne(receiptDoc);
     const receiptId = receiptResult.insertedId;
 
-    const itemDocs = parsed.items.map(i => ({
+    const itemDocs = (parsed.items || []).map(i => ({
       receiptId,
       userId,
-      name: i.name,
-      qty: i.qty,
-      unitPrice: i.unitPrice,
-      totalPrice: i.totalPrice
+      name: i.name || "Unknown Item",
+      qty: Number(i.qty) || 1,
+      unitPrice: Number(i.unitPrice) || 0,
+      totalPrice: Number(i.totalPrice) || 0
     }));
 
     if (itemDocs.length > 0) {
@@ -67,14 +67,12 @@ module.exports = async (req, res) => {
   }
 };
 
-
 /* ============================================================
-   AI RECEIPT PARSER — FIXED FOR REAL JSON OUTPUT
+   AI RECEIPT PARSER — HARDENED & ALWAYS RETURNS VALID JSON
 ============================================================ */
 async function parseReceiptAI(imageBase64) {
-
-  // Ensure correct data URL
   let url = imageBase64;
+
   if (!url.startsWith("data:image")) {
     url = `data:image/jpeg;base64,${url}`;
   }
@@ -84,7 +82,8 @@ async function parseReceiptAI(imageBase64) {
     messages: [
       {
         role: "system",
-        content: "Return ONLY raw JSON. No markdown, no ```json blocks."
+        content:
+          "Return ONLY raw JSON. NO markdown, NO code fence, NO explanation."
       },
       {
         role: "user",
@@ -103,17 +102,31 @@ async function parseReceiptAI(imageBase64) {
     ]
   });
 
-  // Raw response text (may contain ```json)
   let raw = response.choices[0].message.content.trim();
 
-  // REMOVE ANY FENCED CODE BLOCKS
-  raw = raw.replace(/```json/gi, "");
-  raw = raw.replace(/```/g, "");
-  raw = raw.trim();
+  // REMOVE ANY POSSIBLE CODE BLOCKS OR TEXT
+  raw = raw
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .replace(/^[A-Za-z\s:]+$/g, "") // remove accidental text responses
+    .trim();
 
-  // Debug print
-  console.log("🧹 CLEANED AI RESPONSE:", raw);
+  console.log("🧹 CLEANED AI OUTPUT:", raw);
 
-  // NOW parse safely
-  return JSON.parse(raw);
+  // SAFE PARSE WRAPPER
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error("❌ JSON Parse Failed — AI Returned Non-JSON:", raw);
+
+    // RETURN FALLBACK so server NEVER crashes
+    return {
+      store: "Unknown",
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+      rawText: raw,
+      items: []
+    };
+  }
 }
