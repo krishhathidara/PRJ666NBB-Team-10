@@ -1,12 +1,23 @@
-<svg width="120" height="36" viewBox="0 0 120 36" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo">
-<defs>
-<linearGradient id="g" x1="0" x2="1">
-<stop offset="0%" stop-color="#48c774"/>
-<stop offset="100%" stop-color="#2fb56a"/>
-</linearGradient>
-</defs>
-<rect rx="8" ry="8" width="120" height="36" fill="#101720" stroke="#213040"/>
-<g transform="translate(10,24)" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="url(#g)">
-<text>Grocery Web</text>
-</g>
+<svg width="320" height="100" viewBox="0 0 350 110" xmlns="http://www.w3.org/2000/svg">
+  <!-- Glow Background Circle -->
+  <defs>
+    <radialGradient id="biteGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4fc3ff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.3"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Bite Icon -->
+  <circle cx="65" cy="55" r="38" fill="url(#biteGlow)" />
+  <circle cx="90" cy="38" r="12" fill="#0f172a"/>  
+  <circle cx="82" cy="60" r="9" fill="#0f172a"/>  
+
+  <!-- Text -->
+  <text x="130" y="65"
+        font-family="Poppins, Arial, sans-serif"
+        font-size="48"
+        font-weight="700"
+        fill="#ffffff">
+      Price<tspan fill="#38bdf8">Bite</tspan>
+  </text>
 </svg>
