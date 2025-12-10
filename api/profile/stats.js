@@ -1,78 +1,60 @@
 // api/profile/stats.js
-//
-// Aggregates analytics for the profile page.
-// Uses BOTH email and userId so it works with old and new orders.
 
 const { getDb } = require("../_db.js");
 const { getUserFromReq } = require("../_auth.js");
 
+// Helper: safe number conversion
 function safeNumber(v) {
   if (typeof v === "number") return v;
   const n = parseFloat(v);
   return Number.isFinite(n) ? n : 0;
 }
 
-function sum(arr) {
-  return arr.reduce((acc, v) => acc + safeNumber(v), 0);
-}
-
-function normalizeOrder(order) {
-  if (!order || typeof order !== "object") return null;
-
-  const storeName =
-    order.storeName ||
-    order.store ||
-    (Array.isArray(order.items) &&
-      order.items[0] &&
-      order.items[0].store) ||
-    "Unknown store";
-
-  const total =
-    safeNumber(order.amount) ||
-    safeNumber(order.total) ||
-    (order.amount_total ? order.amount_total / 100 : 0);
-
-  let itemsCount = 0;
-  if (typeof order.itemsCount === "number") {
-    itemsCount = order.itemsCount;
-  } else if (Array.isArray(order.items)) {
-    itemsCount = order.items.reduce(
-      (acc, it) => acc + safeNumber(it.quantity || it.qty || 1),
-      0
-    );
+// Helper: Normalize currency
+// Stripe stores amounts in cents (integers), Receipts usually in dollars (floats)
+function normalizeAmount(doc) {
+  // 1. Check for Stripe 'amount_total' (cents)
+  if (typeof doc.amount_total === 'number') {
+    return doc.amount_total / 100;
+  }
+  // 2. Check for standard 'amount' or 'total'
+  if (doc.amount !== undefined) return safeNumber(doc.amount);
+  if (doc.total !== undefined) return safeNumber(doc.total);
+  
+  // 3. specific check for receipts summary
+  if (doc.summary && doc.summary.total !== undefined) {
+    return safeNumber(doc.summary.total);
   }
 
-  return { storeName, total, itemsCount };
+  return 0;
 }
 
-function normalizeReceipt(r) {
-  if (!r || typeof r !== "object") return null;
-
-  const storeName =
-    r.storeName ||
-    r.store ||
-    (r.summary && r.summary.storeName) ||
-    "Unknown store";
-
-  const total =
-    safeNumber(r.total) ||
-    safeNumber(r.amount) ||
-    safeNumber(r.summary && r.summary.total);
-
-  let itemsCount = 0;
-  if (typeof r.itemsCount === "number") {
-    itemsCount = r.itemsCount;
-  } else if (Array.isArray(r.items)) {
-    itemsCount = r.items.reduce(
-      (acc, it) => acc + safeNumber(it.quantity || it.qty || 1),
-      0
-    );
+// Helper: Normalize Item Counts
+function normalizeItemsCount(doc) {
+  // If explicitly set
+  if (typeof doc.itemsCount === 'number') return doc.itemsCount;
+  
+  // Calculate from items array
+  if (Array.isArray(doc.items)) {
+    return doc.items.reduce((acc, item) => {
+      const qty = item.quantity || item.qty || 1;
+      return acc + safeNumber(qty);
+    }, 0);
   }
+  return 0;
+}
 
-  return { storeName, total, itemsCount };
+// Helper: Get Store Name
+function getStoreName(doc) {
+  return doc.storeName || 
+         doc.store || 
+         (doc.summary && doc.summary.storeName) || 
+         (Array.isArray(doc.items) && doc.items[0] && doc.items[0].store) || 
+         "Other";
 }
 
 module.exports = async (req, res) => {
+  // Allow GET only
   if (req.method !== "GET") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
@@ -81,118 +63,100 @@ module.exports = async (req, res) => {
     const db = await getDb();
     const user = getUserFromReq(req);
 
-    const emailRaw =
-      (req.query && req.query.email) || (user && user.email) || "";
-    const email = emailRaw ? String(emailRaw).trim().toLowerCase() : null;
-    const userId = user && user.id ? user.id : null;
+    // 1. Identify User (by Email AND ID to be thorough)
+    const emailRaw = (req.query.email || user?.email || "").trim().toLowerCase();
+    const userId = user?.id || null;
 
-    const filterOr = [];
-
-    if (email) {
-      filterOr.push(
-        { email },
-        { userEmail: email },
-        { "user.email": email }
-      );
+    if (!emailRaw && !userId) {
+      return res.status(400).json({ ok: false, error: "Not authenticated or no email provided" });
     }
 
+    // 2. Build Query to find ALL user data
+    const filterConditions = [];
+    
+    if (emailRaw) {
+      filterConditions.push({ email: emailRaw });
+      filterConditions.push({ userEmail: emailRaw });
+      filterConditions.push({ "user.email": emailRaw });
+    }
+    
     if (userId) {
-      filterOr.push({ userId }, { "user.id": userId });
+      filterConditions.push({ userId: userId });
+      filterConditions.push({ "user.id": userId });
+      filterConditions.push({ ownerId: userId });
     }
 
-    if (filterOr.length === 0) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "No email or user id to filter by" });
-    }
+    const query = { $or: filterConditions };
 
-    const mongoFilter = { $or: filterOr };
-
-    const ordersCol = db.collection("orders");
-    const receiptsCol = db.collection("receipts");
-
-    const [ordersRaw, receiptsRaw] = await Promise.all([
-      ordersCol.find(mongoFilter).toArray(),
-      receiptsCol.find(mongoFilter).toArray(),
+    // 3. Fetch Data Concurrently
+    const [orders, receipts] = await Promise.all([
+      db.collection("orders").find(query).toArray(),
+      db.collection("receipts").find(query).toArray()
     ]);
 
-    console.log("[profile/stats] Orders found:", ordersRaw.length);
-    console.log("[profile/stats] Receipts found:", receiptsRaw.length);
+    // 4. Aggregate Data
+    const allTransactions = [...orders, ...receipts];
 
-    const orders = ordersRaw.map(normalizeOrder).filter(Boolean);
-    const receipts = receiptsRaw.map(normalizeReceipt).filter(Boolean);
+    let totalSpent = 0;
+    let itemsBought = 0;
+    const storeStats = {}; // { "Walmart": { spent: 100, count: 2 } }
+    const itemFrequency = {};
 
-    const all = [...orders, ...receipts];
+    for (const doc of allTransactions) {
+      const amt = normalizeAmount(doc);
+      const count = normalizeItemsCount(doc);
+      const store = getStoreName(doc) || "Unknown Store";
 
-    const totalSpent = sum(all.map((r) => r.total));
-    const itemsBought = sum(all.map((r) => r.itemsCount));
-    const transactions = all.length;
+      totalSpent += amt;
+      itemsBought += count;
 
-    // Per-store totals
-    const byStore = new Map();
-    for (const rec of all) {
-      const name = rec.storeName || "Unknown store";
-      if (!byStore.has(name)) {
-        byStore.set(name, {
-          storeName: name,
-          totalSpent: 0,
-          transactions: 0,
-          itemsBought: 0,
+      // Update Store Stats
+      if (!storeStats[store]) {
+        storeStats[store] = { name: store, spent: 0, transactions: 0 };
+      }
+      storeStats[store].spent += amt;
+      storeStats[store].transactions += 1;
+
+      // Track Items (mainly from orders which have item details)
+      if (Array.isArray(doc.items)) {
+        doc.items.forEach(it => {
+          const name = it.name || it.productName || it.description || "Unknown Item";
+          const qty = safeNumber(it.quantity || it.qty || 1);
+          itemFrequency[name] = (itemFrequency[name] || 0) + qty;
         });
       }
-      const entry = byStore.get(name);
-      entry.totalSpent += rec.total;
-      entry.transactions += 1;
-      entry.itemsBought += rec.itemsCount;
     }
 
-    const stores = Array.from(byStore.values()).sort(
-      (a, b) => b.totalSpent - a.totalSpent
-    );
-    const topStore = stores[0] || null;
-
-    // Most bought item (orders only)
-    const itemCounts = {};
-    for (const orderDoc of ordersRaw || []) {
-      const itemsArr = Array.isArray(orderDoc.items) ? orderDoc.items : [];
-      for (const it of itemsArr) {
-        const name =
-          it.name || it.description || it.productName || "Unknown item";
-        const qty = safeNumber(it.quantity || it.qty || 1);
-        itemCounts[name] = (itemCounts[name] || 0) + qty;
+    // 5. Sort & Rank
+    // Convert storeStats object to array
+    const sortedStores = Object.values(storeStats).sort((a, b) => b.spent - a.spent);
+    
+    // Find most bought item
+    let mostBoughtName = "—";
+    let maxFreq = 0;
+    for (const [name, freq] of Object.entries(itemFrequency)) {
+      if (freq > maxFreq) {
+        maxFreq = freq;
+        mostBoughtName = name;
       }
     }
 
-    let mostBoughtItemName = null;
-    let mostBoughtItemCount = 0;
-    for (const [name, count] of Object.entries(itemCounts)) {
-      if (count > mostBoughtItemCount) {
-        mostBoughtItemCount = count;
-        mostBoughtItemName = name;
-      }
-    }
-
-    return res.status(200).json({
+    // 6. Respond
+    res.status(200).json({
       ok: true,
-      email: email || null,
-      userId: userId || null,
       totals: {
-        totalSpent,
-        itemsBought,
-        transactions,
+        spent: totalSpent,
+        items: itemsBought,
+        transactions: allTransactions.length
       },
-      stores,
-      topStore,
-      quick: {
-        listsCreated: receipts.length,
-        mostBoughtItemName: mostBoughtItemName || null,
-      },
+      stores: sortedStores, // For the chart
+      favStore: sortedStores.length > 0 ? sortedStores[0].name : "—",
+      mostBought: mostBoughtName,
+      listsCreated: receipts.length
     });
+
   } catch (err) {
-    console.error("Profile stats error:", err);
-    return res.status(500).json({
-      ok: false,
-      error: "Internal error while computing stats",
-    });
+    console.error("[Profile Stats] Server Error:", err);
+    res.status(500).json({ ok: false, error: "Internal server error" });
   }
 };

@@ -3,374 +3,399 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Profile</title>
+  <title>Your Profile | Grocery Web</title>
+  
   <link rel="stylesheet" href="/styles/base.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
   <script src="/scripts/ambient.js" defer></script>
 
   <style>
-  /* ---- Background Theme ---- */
-  body {
-    background: radial-gradient(circle at top right, #0f1f4d, #0a1640 60%, #061030);
-    color: #e2e8f0;
-    min-height: 100vh;
-    font-family: 'Inter', sans-serif;
-  }
+    /* ---- Theme & Background ---- */
+    :root {
+      --primary: #3b82f6;
+      --success: #22c55e;
+      --bg-dark: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.1);
+    }
 
-  /* ---------- NAVBAR ---------- */
-  header.nav.glossy-nav {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(20px) saturate(1.6);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-    padding: 12px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+    body {
+      background: radial-gradient(circle at top right, #1e1b4b, #0f172a 60%, #020617);
+      color: #e2e8f0;
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+    }
 
-  .nav .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    color: #f9fafb;
-    font-weight: 700;
-    font-size: 1.1rem;
-  }
+    /* ---- Animations ---- */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
-  .nav .brand img {
-    height: 28px;
-    width: auto;
-  }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
 
-  .mainnav {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-  }
+    /* ---- Navbar ---- */
+    header.nav.glossy-nav {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
 
-  .mainnav a {
-    color: #cbd5e1;
-    text-decoration: none;
-    font-weight: 500;
-    padding: 8px 12px;
-    border-radius: 8px;
-    transition: background 0.2s, color 0.2s;
-  }
+    .nav .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #f8fafc;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    .nav .brand img { height: 32px; width: auto; }
 
-  .mainnav a:hover {
-    background: rgba(255,255,255,0.1);
-    color: #60a5fa;
-  }
+    .mainnav { display: flex; gap: 20px; align-items: center; }
+    .mainnav a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .mainnav a:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    .mainnav a.active { color: #60a5fa; background: rgba(59,130,246,0.15); }
 
-  .mainnav a.active {
-    background: rgba(59,130,246,0.25);
-    color: #60a5fa;
-    font-weight: 600;
-  }
+    .account a { text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .btn-outline {
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 16px;
+      border-radius: 8px;
+      color: #fff;
+      background: transparent;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.05); border-color: #fff; }
 
-  .account a {
-    color: #93c5fd;
-    text-decoration: none;
-    margin-left: 10px;
-  }
+    .btn {
+      background: linear-gradient(135deg, var(--primary), var(--success));
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4); }
 
-  .btn-outline {
-    border: 1px solid rgba(255,255,255,0.3);
-    padding: 8px 14px;
-    border-radius: 8px;
-  }
+    /* ---- Profile Hero ---- */
+    .profile-hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+      animation: fadeUp 0.6s ease-out;
+    }
+    .avatar-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 20px;
+    }
+    .profile-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--success);
+      box-shadow: 0 0 25px rgba(34, 197, 94, 0.3);
+    }
+    .avatar-edit-icon {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background: #fff;
+      color: #000;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+    .avatar-edit-icon:hover { transform: scale(1.1); }
 
-  .btn {
-    background: linear-gradient(135deg, #3b82f6, #22c55e);
-    color: #fff;
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-weight: 600;
-    text-decoration: none;
-  }
+    h1 { margin: 0; font-size: 2rem; letter-spacing: -0.5px; }
+    .email-text { color: #94a3b8; margin-top: 5px; font-size: 1rem; }
 
-  /* ---------- Profile Layout ---------- */
-  .profile-hero {
-    background: linear-gradient(135deg, rgba(37,99,235,0.4), rgba(59,130,246,0.3), rgba(34,197,94,0.25));
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 18px;
-    padding: 30px 40px;
-    margin: 60px auto 0;
-    max-width: 700px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    backdrop-filter: blur(14px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
-    color: #f8fafc;
-  }
+    /* ---- Edit Form (Hidden by default) ---- */
+    .edit-profile-modal {
+      display: none; /* Toggled by JS */
+      background: rgba(15, 23, 42, 0.95);
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+      max-width: 400px;
+      margin: 20px auto;
+      text-align: left;
+      animation: fadeIn 0.3s;
+    }
+    .edit-profile-modal input, .edit-profile-modal select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #fff;
+      box-sizing: border-box; /* Fix width issues */
+    }
+    .edit-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
-  .profile-avatar img {
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    border: 3px solid #22c55e;
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
-  }
+    /* ---- Stats Grid ---- */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto 60px;
+      padding: 0 20px;
+      animation: fadeUp 0.8s ease-out;
+    }
 
-  .avatar-actions {
-    text-align: center;
-    margin-top: 15px;
-  }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .card h2 { margin-top: 0; font-size: 1.25rem; margin-bottom: 16px; color: #f1f5f9; }
 
-  .profile-container, .profile-stats {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(10px);
-    border-radius: 16px;
-    padding: 20px;
-    margin: 40px auto;
-    max-width: 900px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-  }
+    /* Top Stats Row */
+    .stats-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .stat-tile {
+      background: rgba(255,255,255,0.03);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      transition: background 0.3s;
+    }
+    .stat-tile:hover { background: rgba(255,255,255,0.06); }
+    .stat-val { font-size: 1.8rem; font-weight: 800; background: linear-gradient(to right, #60a5fa, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-lbl { color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; margin-top: 5px; letter-spacing: 0.5px; }
 
-  .profile-card {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 20px;
-    color: #e2e8f0;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
-  }
+    /* Chart Area */
+    .chart-container { position: relative; height: 220px; display: flex; justify-content: center; }
 
-  h1, h2, h4 { color: #f9fafb; }
+    /* List Items */
+    ul.data-list { list-style: none; padding: 0; margin: 0; }
+    ul.data-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: #cbd5e1;
+    }
+    ul.data-list li span { color: #fff; font-weight: 600; }
 
-  /* Gradient Button Style */
-  .btn-edit, .avatar-btn, .btn-save, .btn-cancel {
-    background: linear-gradient(90deg, #2563eb, #3b82f6, #22c55e);
-    color: #fff;
-    font-weight: 600;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease, opacity 0.2s ease;
-  }
+    /* Progress Bar */
+    .progress-container {
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      height: 10px;
+      width: 100%;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #22c55e);
+      transition: width 1s ease;
+    }
 
-  .btn-edit:hover, .avatar-btn:hover, .btn-save:hover {
-    transform: translateY(-2px);
-    opacity: 0.9;
-  }
+    /* Receipts Grid */
+    .receipts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .receipt-item {
+      aspect-ratio: 1;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid var(--glass-border);
+      transition: transform 0.2s;
+    }
+    .receipt-item:hover { transform: scale(1.03); }
+    .receipt-item img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+    .receipt-item:hover img { opacity: 1; }
 
-  .btn-cancel {
-    background: linear-gradient(90deg, #ef4444, #f43f5e);
-  }
-
-  .stat-card {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    color: #f3f4f6;
-    text-align: center;
-    padding: 18px;
-  }
-
-  .profile-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 20px;
-    text-align: center;
-  }
-
-  .footer {
-    text-align: center;
-    color: #9ca3af;
-    padding: 20px 0 40px;
-    background: transparent;
-  }
-
-  /* ---- Edit Profile ---- */
-  .edit-form {
-    margin-top: 20px;
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-    max-width: 300px;
-    margin-left: auto;
-    margin-right: auto;
-    text-align: center;
-  }
-
-  .edit-form input, .edit-form select {
-    padding: 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    width: 100%;
-  }
-
-  .edit-actions {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-  }
-
-  .progress-bar {
-    height: 10px;
-    width: 100%;
-    background: rgba(255,255,255,0.15);
-    border-radius: 5px;
-    overflow: hidden;
-    margin-top: 10px;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #3b82f6, #22c55e);
-    width: 40%;
-  }
+    footer { text-align: center; color: #64748b; padding: 40px 0; font-size: 0.9rem; }
   </style>
 </head>
 
 <body>
-<!-- ============ NAVBAR ============ -->
+
 <header class="nav glossy-nav">
   <a class="brand" href="/">
     <img src="/assets/logo.svg" alt="Logo">
     <strong>Grocery Web</strong>
   </a>
-  <nav class="mainnav" id="mainnav">
+  <nav class="mainnav">
     <a href="/">Home</a>
     <a href="/nearby.html">Nearby</a>
     <a href="/cart.html">Cart</a>
     <a href="/meal-plan.html">Meal Plan</a>
     <a href="/profile.html" class="active">Profile</a>
-    <a href="/contact.html">Contact Us</a>
   </nav>
   <div class="account">
     <span id="account-guest">
       <a class="btn-outline" href="/auth/signin.html">Sign In</a>
       <a class="btn" href="/auth/signup.html">Sign Up</a>
     </span>
-    <span id="account-user" style="display:none">
-      <a href="/profile.html">Profile</a>
-      <a id="logout-link" href="#">Logout</a>
+    <span id="account-user" style="display:none; display:flex; gap:10px; align-items:center;">
+      <a href="/profile.html" style="color:#fff;">My Profile</a>
+      <a id="logout-link" href="#" style="color:#ef4444;">Logout</a>
     </span>
   </div>
 </header>
 
-<!-- Profile Hero -->
 <section class="profile-hero">
-  <div class="profile-avatar">
-    <img id="profile-avatar" src="/assets/profile.png" alt="Avatar">
+  <div class="avatar-container">
+    <img id="profile-avatar" class="profile-avatar" src="/assets/profile.png" alt="Profile Picture">
+    <div class="avatar-edit-icon" id="triggerAvatarInput" title="Change Avatar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+        <circle cx="12" cy="13" r="4"></circle>
+      </svg>
+    </div>
   </div>
-  <div>
-    <h1 id="name">—</h1>
-    <p id="email">—</p>
+  <input type="file" id="avatarInput" accept="image/*" style="display:none">
+
+  <h1 id="name">Loading...</h1>
+  <p class="email-text" id="email">...</p>
+  
+  <div style="margin-top: 20px;">
+    <button id="editProfileBtn" class="btn-outline">Edit Profile</button>
+  </div>
+
+  <div id="editProfileForm" class="edit-profile-modal">
+    <h3>Edit Details</h3>
+    <input type="text" id="editName" placeholder="Enter Full Name">
+    <input type="email" id="editEmail" placeholder="Enter Email">
+    <select id="editFavStore">
+      <option value="">Select Favorite Store</option>
+      <option value="Walmart">Walmart</option>
+      <option value="Metro">Metro</option>
+      <option value="FreshCo">FreshCo</option>
+      <option value="No Frills">No Frills</option>
+      <option value="T&T">T&T</option>
+    </select>
+    <div class="edit-actions">
+      <button id="cancelEditBtn" class="btn-outline" style="border:none;">Cancel</button>
+      <button id="saveProfileBtn" class="btn">Save Changes</button>
+    </div>
   </div>
 </section>
 
-<!-- Buttons -->
-<div class="avatar-actions">
-  <button id="changeAvatarBtn" class="avatar-btn">Change Avatar</button>
-  <input type="file" id="avatarInput" accept="image/*" style="display:none">
-  <button id="editProfileBtn" class="btn-edit" style="margin-left:10px;">Edit Profile</button>
-</div>
-
-<!-- Edit Form -->
-<div id="editProfileForm" class="edit-form">
-  <input type="text" id="editName" placeholder="Enter full name" />
-  <input type="email" id="editEmail" placeholder="Enter email address" />
-  <select id="editFavStore">
-    <option value="">Select Favorite Store</option>
-    <option value="Walmart">Walmart</option>
-    <option value="Metro">Metro</option>
-    <option value="FreshCo">FreshCo</option>
-    <option value="No Frills">No Frills</option>
-    <option value="T&T">T&T</option>
-  </select>
-  <div class="edit-actions">
-    <button id="saveProfileBtn" class="btn-save">Save</button>
-    <button id="cancelEditBtn" class="btn-cancel">Cancel</button>
+<main class="dashboard-grid">
+  
+  <div class="stats-row">
+    <div class="stat-tile">
+      <div class="stat-val" id="valTotalSpent">$0.00</div>
+      <div class="stat-lbl">Total Spent</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-val" id="valItems">0</div>
+      <div class="stat-lbl">Items Bought</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-val" id="valOrders">0</div>
+      <div class="stat-lbl">Orders & Receipts</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-val" id="valFavStore">—</div>
+      <div class="stat-lbl">Top Store</div>
+    </div>
   </div>
-</div>
 
-<!-- Row 1 -->
-<main class="profile-container">
-  <div class="profile-card">
+  <div class="card">
     <h2>Budget Snapshot</h2>
-    <p style="font-size:0.9rem; color:#cbd5e1; margin-bottom:8px;">
-      Spending breakdown by store
-    </p>
-    <canvas id="budgetChart"></canvas>
+    <div class="chart-container">
+      <canvas id="budgetChart"></canvas>
+    </div>
   </div>
-  <div class="profile-card">
-    <h2>Quick Stats</h2>
-    <ul>
-      <li><strong>Lists created:</strong> <span id="quickListsValue">0</span></li>
-      <li><strong>Items purchased:</strong> <span id="quickItemsValue">0</span></li>
-      <li><strong>Most bought:</strong> <span id="quickMostBoughtValue">—</span></li>
+
+  <div class="card">
+    <h2>Quick Insights</h2>
+    <ul class="data-list">
+      <li>Lists Created: <span id="insightLists">0</span></li>
+      <li>Most Bought Item: <span id="insightMostBought">—</span></li>
+      <li>Profile Favorite: <span id="insightProfileFav">—</span></li>
     </ul>
+
+    <h2 style="margin-top: 30px;">Monthly Goal</h2>
+    <div style="display:flex; justify-content:space-between; font-size:0.9rem; color:#cbd5e1;">
+      <span id="goalText">Progress</span>
+      <span>Target: $200.00</span>
+    </div>
+    <div class="progress-container">
+      <div class="progress-bar-fill" id="goalBar"></div>
+    </div>
   </div>
+
+  <div class="card" style="grid-column: 1 / -1;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>Your Receipts</h2>
+      <label class="btn" style="font-size: 0.9rem;">
+        Scan New Receipt
+        <input type="file" id="receiptInputProfile" accept="image/*" capture="environment" style="display:none">
+      </label>
+    </div>
+    
+    <div id="profile-receipts" class="receipts-grid">
+      </div>
+    
+    <div style="text-align:center; margin-top:20px;">
+      <a href="/receipts.html" class="btn-outline">View Full History</a>
+    </div>
+  </div>
+
 </main>
 
-<!-- Row 2 -->
-<section class="profile-stats">
-  <div class="stat-card">
-    <h4 id="cardTotalSpentValue">$0.00</h4>
-    <p>Total Spent</p>
-  </div>
-  <div class="stat-card">
-    <h4 id="cardItemsBoughtValue">0</h4>
-    <p>Items Bought</p>
-  </div>
-  <div class="stat-card">
-    <h4 id="cardOrdersValue">0</h4>
-    <p>Orders &amp; Receipts</p>
-  </div>
-  <div class="stat-card">
-    <h4 id="cardFavStoreValue">—</h4>
-    <p>Fav Store (Based on purchases)</p>
-    <small>Your profile fav: <span id="favStoreText">—</span></small>
-  </div>
-</section>
+<footer>
+  <p>© 2025 Grocery Web. Designed for smarter shopping.</p>
+</footer>
 
-<!-- Row 3 -->
-<section class="profile-container">
-  <div class="profile-card" style="grid-column: 1 / -1">
-    <h2>Goals &amp; Progress</h2>
-    <p>Monthly savings goal</p>
-    <div class="progress-bar"><div class="progress-fill"></div></div>
-    <small id="goalProgressText">0% of your $100 goal</small>
-  </div>
-</section>
-
-<!-- Row 4 — Receipts -->
-<section class="profile-container">
-  <div class="profile-card">
-    <h2>Your Receipts</h2>
-
-    <!-- Upload / Scan Button -->
-    <div style="margin: 12px 0;">
-      <label class="btn" for="receiptInputProfile">Scan / Upload Receipt</label>
-      <input type="file" id="receiptInputProfile" accept="image/*" capture="environment" style="display:none;">
-    </div>
-
-    <div id="profile-receipts" class="grid"
-      style="margin-top:16px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;">
-    </div>
-
-    <a class="btn-outline" href="/receipts.html" style="margin-top:20px; display:inline-block;">
-      View all receipts
-    </a>
-  </div>
-</section>
-
-<footer class="footer">© 2025 Grocery Web</footer>
-
-<script src="/scripts/profile.js"></script>
 <script src="/scripts/session.js"></script>
+<script src="/scripts/profile.js"></script>
 <script src="/scripts/profile-receipts.js"></script>
+
 </body>
 </html>
